@@ -1,0 +1,96 @@
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+bin/
+dist/
+
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go coverage tool
+*.out
+coverage.txt
+*.cover
+*.coverprofile
+
+# Go workspace file
+go.work
+go.work.sum
+
+# Dependency directories
+vendor/
+
+# IDE и редакторы кода
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Переменные окружения (НИКОГДА не коммитить!)
+.env
+.env.local
+.env.*.local
+
+# Логи
+*.log
+logs/
+
+# Временные файлы
+tmp/
+temp/
+*.tmp
+
+# Docker compose override (локальные настройки)
+docker-compose.override.yml
+
+# Миграции (если содержат чувствительные данные)
+# migrations/*.sql - закомментируй, если миграции должны быть в репозитории
+
+# Скомпилированная документация Swagger
+docs/
+swagger.json
+swagger.yaml
+
+# Архивы и бэкапы
+*.zip
+*.tar.gz
+*.rar
+*.bak
+*.backup
+
+# Certificates and keys (НИКОГДА не коммитить!)
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+
+# Docker volumes (базы данных)
+docker-data/
+data/
+
+# Профили и отладочная информация
+cpu.prof
+mem.prof
+trace.prof
+
+# Go build cache
+go-build/
