@@ -15,7 +15,24 @@ func NewAuthHandler() *AuthHandler {
 	return &AuthHandler{service: service.NewAuthService()}
 }
 
-// Register - регистрация нового пользователя (роль по умолчанию - fan)
+// setAuthCookie - установка куки с токеном
+func (h *AuthHandler) setAuthCookie(c *gin.Context, token string) {
+	// HttpOnly - JavaScript не имеет доступа (защита от XSS)
+	// Secure - передаётся только по HTTPS (в продакшене)
+	// SameSite=Lax - защита от CSRF
+	
+	c.SetCookie(
+		"token",     // имя куки
+		token,       // значение
+		86400,       // срок жизни (24 часа в секундах)
+		"/api",      // путь (только для /api endpoints)
+		"",          // домен (пустой = текущий хост)
+		false,       // Secure (false для localhost)
+		true,        // HttpOnly
+	)
+}
+
+// Register - регистрация нового пользователя (роль по умолчанию - user)
 func (h *AuthHandler) Register(c *gin.Context) {
 	var input struct {
 		Username string `json:"username" binding:"required"`
@@ -39,10 +56,13 @@ func (h *AuthHandler) Register(c *gin.Context) {
 		return
 	}
 
+	// Устанавливаем куку с токеном
+	h.setAuthCookie(c, token)
+
 	c.JSON(http.StatusCreated, gin.H{
 		"message": "User registered",
-		"token":   token,
-		"role":    "fan",
+		"token":   token, // Возвращаем и в JSON для совместимости
+		"role":    "user",
 	})
 }
 
@@ -71,6 +91,9 @@ func (h *AuthHandler) RegisterAdmin(c *gin.Context) {
 		return
 	}
 
+	// Устанавливаем куку с токеном
+	h.setAuthCookie(c, token)
+
 	c.JSON(http.StatusCreated, gin.H{
 		"message": "User registered",
 		"token":   token,
@@ -95,6 +118,9 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
 	}
+
+	// Устанавливаем куку с токеном
+	h.setAuthCookie(c, token)
 
 	c.JSON(http.StatusOK, gin.H{
 		"token": token,

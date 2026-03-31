@@ -25,6 +25,25 @@ func main() {
 	// Инициализация роутера
 	r := gin.Default()
 
+	// Настройка CORS (для работы с куки и React-фронтендом)
+	r.Use(func(c *gin.Context) {
+		// Разрешаем запросы с фронтенда (localhost:3000 для React)
+		c.Header("Access-Control-Allow-Origin", "http://localhost:3000")
+		// Разрешаем отправку куки
+		c.Header("Access-Control-Allow-Credentials", "true")
+		// Разрешённые методы
+		c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+		// Разрешённые заголовки
+		c.Header("Access-Control-Allow-Headers", "Content-Type, Authorization")
+		// Открываем заголовок Set-Cookie для браузера
+		c.Header("Access-Control-Expose-Headers", "Set-Cookie")
+		// Обработка preflight запросов
+		if c.Request.Method == "OPTIONS" {
+			c.AbortWithStatus(204)
+			return
+		}
+	})
+
 	// Инициализация хендлеров
 	matchHandler := handler.NewMatchHandler()
 	authHandler := handler.NewAuthHandler()

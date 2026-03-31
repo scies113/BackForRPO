@@ -23,12 +23,14 @@ func TestGenerateToken(t *testing.T) {
 	// Устанавливаем секретный ключ для тестов
 	os.Setenv("JWT_SECRET", "test-secret-key")
 
-	// Тест 1: Генерация токена
+	// Создаём пользователя с явным ID (как будто он из БД)
 	user := &model.User{
 		Username: "testuser",
 		Email:    "test@example.com",
 		RoleID:   1,
 	}
+	// Устанавливаем ID вручную (в реальном сценарии он присваивается при сохранении в БД)
+	user.ID = 1
 
 	token, err := GenerateToken(user, "fan")
 	if err != nil {
@@ -82,14 +84,23 @@ func TestRoleMiddleware(t *testing.T) {
 		w := httptest.NewRecorder()
 		c, _ := gin.CreateTestContext(w)
 		c.Request, _ = http.NewRequest("GET", "/test", nil)
-		
+
 		// Устанавливаем роль в контекст
 		c.Set("userRole", "admin")
-		
-		// Вызываем middleware
-		RoleMiddleware("admin", "operator")(func(ctx *gin.Context) {
+
+		// Создаём финальный хендлер
+		finalHandler := func(ctx *gin.Context) {
 			ctx.JSON(http.StatusOK, gin.H{"status": "ok"})
-		})(c)
+		}
+
+		// Вызываем middleware: RoleMiddleware возвращает gin.HandlerFunc
+		handler := RoleMiddleware("admin", "operator")
+		handler(c)
+		
+		// Если middleware пропустило, вызываем финальный хендлер
+		if w.Code == http.StatusOK {
+			finalHandler(c)
+		}
 
 		if w.Code != http.StatusOK {
 			t.Errorf("Expected status 200, got %d", w.Code)
@@ -101,14 +112,13 @@ func TestRoleMiddleware(t *testing.T) {
 		w := httptest.NewRecorder()
 		c, _ := gin.CreateTestContext(w)
 		c.Request, _ = http.NewRequest("GET", "/test", nil)
-		
+
 		// Устанавливаем роль в контекст
 		c.Set("userRole", "fan")
-		
+
 		// Вызываем middleware
-		RoleMiddleware("admin", "operator")(func(ctx *gin.Context) {
-			ctx.JSON(http.StatusOK, gin.H{"status": "ok"})
-		})(c)
+		handler := RoleMiddleware("admin", "operator")
+		handler(c)
 
 		if w.Code != http.StatusForbidden {
 			t.Errorf("Expected status 403, got %d", w.Code)
@@ -120,11 +130,10 @@ func TestRoleMiddleware(t *testing.T) {
 		w := httptest.NewRecorder()
 		c, _ := gin.CreateTestContext(w)
 		c.Request, _ = http.NewRequest("GET", "/test", nil)
-		
+
 		// Вызываем middleware (роль не установлена)
-		RoleMiddleware("admin")(func(ctx *gin.Context) {
-			ctx.JSON(http.StatusOK, gin.H{"status": "ok"})
-		})(c)
+		handler := RoleMiddleware("admin")
+		handler(c)
 
 		if w.Code != http.StatusForbidden {
 			t.Errorf("Expected status 403, got %d", w.Code)

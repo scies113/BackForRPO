@@ -27,11 +27,35 @@ func Connect() error {
 		return err
 	}
 
-	// Автоматическая миграция таблиц (создание схемы)
-	err = DB.AutoMigrate(&model.Role{}, &model.User{}, &model.Match{}, &model.Prediction{}, &model.AuditLog{})
+	// Явно создаём таблицу roles (без AutoMigrate, чтобы не создавать лишние данные)
+	err = DB.Table("roles").AutoMigrate(&model.Role{})
+	if err != nil {
+		return err
+	}
+
+	// Создаём роли по умолчанию
+	createDefaultRoles()
+
+	// Автоматическая миграция остальных таблиц
+	err = DB.AutoMigrate(&model.User{}, &model.Match{}, &model.Prediction{}, &model.AuditLog{})
 	if err != nil {
 		return err
 	}
 
 	return nil
+}
+
+// createDefaultRoles - создание ролей по умолчанию (admin, operator, analyst, user)
+func createDefaultRoles() {
+	roles := []model.Role{
+		{Name: "admin"},
+		{Name: "operator"},
+		{Name: "analyst"},
+		{Name: "user"}, // user = fan (обычный пользователь)
+	}
+
+	for _, role := range roles {
+		// Используем FirstOrCreate, чтобы не дублировать роли
+		DB.FirstOrCreate(&role, model.Role{Name: role.Name})
+	}
 }

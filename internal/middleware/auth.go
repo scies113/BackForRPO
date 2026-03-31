@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-// Claims - структура токена
+//Claims - структура токена
 type Claims struct {
 	UserID   uint   `json:"user_id"`
 	Username string `json:"username"`
@@ -19,24 +19,36 @@ type Claims struct {
 }
 
 // AuthMiddleware - проверка JWT токена
+// Токен может быть передан:
+// 1. В заголовке Authorization: Bearer <token>
+// 2. В куки с именем "token"
 func AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
+		var tokenString string
+
+		// Пробуем получить токен из заголовка Authorization
 		authHeader := c.GetHeader("Authorization")
-		if authHeader == "" {
+		if authHeader != "" {
+			// Проверка формата "Bearer <token>"
+			parts := strings.Split(authHeader, " ")
+			if len(parts) == 2 && parts[0] == "Bearer" {
+				tokenString = parts[1]
+			}
+		}
+
+		// Если токен не найден в заголовке, пробуем куки
+		if tokenString == "" {
+			if cookie, err := c.Cookie("token"); err == nil {
+				tokenString = cookie
+			}
+		}
+
+		// Токен не найден нигде
+		if tokenString == "" {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Token required"})
 			c.Abort()
 			return
 		}
-
-		// Проверка формата "Bearer <token>"
-		parts := strings.Split(authHeader, " ")
-		if len(parts) != 2 || parts[0] != "Bearer" {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid token format"})
-			c.Abort()
-			return
-		}
-
-		tokenString := parts[1]
 
 		// Парсинг и проверка токена
 		claims := &Claims{}

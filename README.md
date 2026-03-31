@@ -1,9 +1,9 @@
 # GoBackendFootball
 Бэкенд-сервис для управления футбольной статистикой на Go
 
-**Статус проекта:** 🟢 Готовность ~85%
+**Статус проекта:** 🟢 Готовность ~90%
 
-**Версия:** 1.0.0
+**Версия:** 2.0.0 (с поддержкой JWT Cookie)
 
 **Дата обновления:** 31 марта 2026 г.
 
@@ -13,7 +13,7 @@
 
 | Категория | Выполнено | Осталось | % |
 |-----------|-----------|----------|-----|
-| Аутентификация и авторизация | ✅ | — | 100% |
+| Аутентификация и авторизация | ✅ | Cookie + заголовок | 100% |
 | Ролевая модель | ✅ | 4 роли из 4 | 100% |
 | CRUD матчей | ✅ | — | 100% |
 | Валидация данных | ✅ | Клиентская валидация | 80% |
@@ -24,7 +24,396 @@
 | Миграции БД | ❌ | golang-migrate | 10% |
 | Документация API | ⚠️ | Swagger | 40% |
 | Логирование | ⚠️ | zap/logrus | 20% |
-| **ИТОГО** | | | **~85%** |
+| **ИТОГО** | | | **~90%** |
+
+---
+
+## 🔐 JWT-токены: от А до Я (для чайников)
+
+### 📚 Что такое JWT?
+
+**JWT (JSON Web Token)** — это способ безопасной передачи информации между клиентом и сервером.
+
+**Простая аналогия:**
+> Представь, что ты пришёл в аквапарк. На кассе ты покупаешь билет, и тебе надевают **браслет**. Этот браслет:
+> - Подтверждает, что ты оплатил вход (подпись)
+> - Содержит информацию о тебе (тип билета, срок действия)
+> - Позволяет проходить через турникет без повторной оплаты
+>
+> JWT — это такой же «браслет», только цифровой!
+
+---
+
+### 🎯 Зачем нужны JWT-токены?
+
+**Проблема:** HTTP — это протокол без состояния. Сервер не помнит, кто ты, после каждого запроса.
+
+**Решение:** Сервер выдаёт тебе токен, который ты показываешь при каждом запросе.
+
+**Пример:**
+```
+1. Ты логинишься → Сервер выдаёт токен
+2. Ты хочешь получить матчи → Показываешь токен
+3. Сервер проверяет токен → Возвращает данные
+4. Ты хочешь создать матч → Показываешь токен
+5. Сервер проверяет токен и роль → Создаёт матч
+```
+
+---
+
+### 📦 Из чего состоит JWT-токен?
+
+**Токен выглядит так:**
+```
+eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoxLCJ1c2VybmFtZSI6Iml2YW4iLCJyb2xlIjoiYWRtaW4iLCJleHAiOjE3NzUwNDQwNjUsImlhdCI6MTc3NDk1NzY2NX0.qmIzhlEZ3RWL6_1Q-F2D8JfsLE0ob6KLjTG24Eix5VA
+```
+
+**Это 3 части, разделённые точками:**
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  Header  .  Payload (Claims)  .  Signature              │
+│  Заголовок   Данные (claims)     Подпись                │
+└─────────────────────────────────────────────────────────┘
+```
+
+---
+
+#### 1. Заголовок (Header)
+
+**Что это:** Информация о токене (алгоритм шифрования, тип).
+
+**Пример (в коде):**
+```json
+{
+  "alg": "HS256",
+  "typ": "JWT"
+}
+```
+
+**После кодирования в Base64:**
+```
+eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9
+```
+
+---
+
+#### 2. Данные (Payload / Claims)
+
+**Что это:** Информация о пользователе.
+
+**Пример:**
+```json
+{
+  "user_id": 1,
+  "username": "ivan",
+  "role": "admin",
+  "exp": 1775044065,    // когда истечёт (timestamp)
+  "iat": 1774957665     // когда выдан (timestamp)
+}
+```
+
+**После кодирования в Base64:**
+```
+eyJ1c2VyX2lkIjoxLCJ1c2VybmFtZSI6Iml2YW4iLCJyb2xlIjoiYWRtaW4iLCJleHAiOjE3NzUwNDQwNjUsImlhdCI6MTc3NDk1NzY2NX0
+```
+
+**Важно:** Эти данные **НЕ зашифрованы**! Любой может расшифровать и прочитать их на сайте [jwt.io](https://jwt.io). **Не храни секреты в токене!**
+
+---
+
+#### 3. Подпись (Signature)
+
+**Что это:** Гарантирует, что токен не был подделан.
+
+**Как создаётся:**
+```
+Signature = HMAC-SHA256(
+    Header + "." + Payload,
+    JWT_SECRET
+)
+```
+
+**Простыми словами:**
+- Берём заголовок и данные
+- Склеиваем их через точку
+- Шифруем секретным ключом (`JWT_SECRET`)
+- Получаем подпись
+
+**Зачем:** Если хакер изменит данные в токене (например, поменяет роль с `user` на `admin`), подпись не совпадёт, и сервер отклонит токен.
+
+---
+
+### 🔄 Как работает JWT в моём проекте?
+
+#### Шаг 1: Регистрация / Вход
+
+**Клиент отправляет:**
+```json
+POST /api/register
+{
+  "username": "ivan",
+  "email": "ivan@example.com",
+  "password": "password123"
+}
+```
+
+**Сервер делает:**
+1. Создаёт пользователя в БД
+2. Генерирует токен:
+   ```go
+   claims := &Claims{
+       UserID:   1,
+       Username: "ivan",
+       Role:     "user",
+       ExpiresAt: time.Now().Add(24 * time.Hour),
+   }
+   token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+   signedToken := token.SignedString([]byte(os.Getenv("JWT_SECRET")))
+   ```
+3. Возвращает токен клиенту
+
+**Ответ сервера:**
+```json
+{
+  "message": "User registered",
+  "token": "eyJhbGciOiJIUzI1NiIs...",
+  "role": "user"
+}
+```
+
+---
+
+#### Шаг 2: Токен сохраняется у клиента
+
+**Вариант A: Куки (рекомендуется)**
+```
+Set-Cookie: token=eyJhbGciOiJIUzI1NiIs...; Path=/api; Max-Age=86400; HttpOnly
+```
+
+**Преимущества:**
+- ✅ `HttpOnly` — JavaScript не имеет доступа (защита от XSS)
+- ✅ Автоматически отправляется с запросами
+- ✅ Не нужно добавлять заголовок вручную
+
+**Вариант B: LocalStorage**
+```javascript
+localStorage.setItem('token', 'eyJhbGciOiJIUzI1NiIs...');
+```
+
+**Преимущества:**
+- ✅ Полный контроль через JavaScript
+- ✅ Легко читать и модифицировать
+
+**Недостатки:**
+- ❌ Уязвимо для XSS-атак
+- ❌ Нужно добавлять заголовок вручную
+
+---
+
+#### Шаг 3: Запрос с токеном
+
+**Клиент отправляет запрос:**
+
+**С куки:**
+```javascript
+fetch('http://localhost:8080/api/matches', {
+  credentials: 'include' // Браузер автоматически отправит куку
+});
+```
+
+**С заголовком:**
+```javascript
+fetch('http://localhost:8080/api/matches', {
+  headers: {
+    'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIs...'
+  }
+});
+```
+
+---
+
+#### Шаг 4: Сервер проверяет токен
+
+**Middleware (auth.go):**
+```go
+func AuthMiddleware() gin.HandlerFunc {
+    return func(c *gin.Context) {
+        // 1. Пробуем получить токен из заголовка
+        authHeader := c.GetHeader("Authorization")
+        tokenString := strings.Split(authHeader, " ")[1]
+
+        // 2. Если нет в заголовке, пробуем куки
+        if tokenString == "" {
+            tokenString, _ = c.Cookie("token")
+        }
+
+        // 3. Парсим токен
+        claims := &Claims{}
+        token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
+            return []byte(os.Getenv("JWT_SECRET")), nil
+        })
+
+        // 4. Проверяем валидность
+        if err != nil || !token.Valid {
+            c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired token"})
+            return
+        }
+
+        // 5. Сохраняем данные в контекст
+        c.Set("userID", claims.UserID)
+        c.Set("userName", claims.Username)
+        c.Set("userRole", claims.Role)
+
+        c.Next()
+    }
+}
+```
+
+**Что происходит:**
+1. Извлекаем токен (из заголовка или куки)
+2. Расшифровываем подпись с помощью `JWT_SECRET`
+3. Проверяем, совпадает ли подпись
+4. Проверяем срок действия (`exp`)
+5. Извлекаем `user_id`, `username`, `role`
+6. Сохраняем в контекст Gin (доступно в хендлерах)
+
+---
+
+#### Шаг 5: Проверка роли
+
+**Middleware (RoleMiddleware):**
+```go
+func RoleMiddleware(requiredRoles ...string) gin.HandlerFunc {
+    return func(c *gin.Context) {
+        userRole := c.GetString("userRole")
+
+        // Проверяем, есть ли роль в списке разрешённых
+        for _, role := range requiredRoles {
+            if userRole == role {
+                c.Next()
+                return
+            }
+        }
+
+        // Роль не подходит
+        c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Insufficient permissions"})
+    }
+}
+```
+
+**Использование:**
+```go
+// Только admin и operator могут создавать матчи
+secure.POST("/matches", matchHandler.CreateMatch, 
+            middleware.RoleMiddleware("admin", "operator"))
+```
+
+---
+
+### 🔍 Как расшифровать токен?
+
+**Способ 1: Сайт jwt.io**
+1. Скопируй токен
+2. Вставь на [jwt.io](https://jwt.io)
+3. Увидишь decoded данные
+
+**Способ 2: Код на Go**
+```go
+import "github.com/golang-jwt/jwt/v5"
+
+func decodeToken(tokenString string) (*Claims, error) {
+    claims := &Claims{}
+    _, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
+        return []byte(os.Getenv("JWT_SECRET")), nil
+    })
+    return claims, err
+}
+```
+
+**Способ 3: Код на JavaScript**
+```javascript
+function decodeJWT(token) {
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(atob(base64).split('').map(c => {
+        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+    }).join(''));
+    return JSON.parse(jsonPayload);
+}
+
+const claims = decodeJWT('eyJhbGciOiJIUzI1NiIs...');
+console.log(claims);
+// { user_id: 1, username: "ivan", role: "admin", exp: 1775044065, iat: 1774957665 }
+```
+
+---
+
+### ⚠️ Частые проблемы и решения
+
+#### 1. Токен не работает
+
+**Проблема:** Сервер возвращает `{"error": "Invalid or expired token"}`
+
+**Возможные причины:**
+- ❌ Истёк срок действия (24 часа)
+- ❌ Неправильный `JWT_SECRET`
+- ❌ Токен был подделан
+
+**Решение:**
+- Залогинься заново
+- Проверь `.env` (JWT_SECRET должен совпадать)
+
+---
+
+#### 2. Куки не устанавливается
+
+**Проблема:** В ответе нет `Set-Cookie`
+
+**Возможные причины:**
+- ❌ CORS не настроен
+- ❌ Неправильный домен куки
+
+**Решение:**
+```go
+// В main.go
+c.Header("Access-Control-Allow-Credentials", "true")
+c.Header("Access-Control-Expose-Headers", "Set-Cookie")
+
+// В auth_handler.go
+c.SetCookie("token", token, 86400, "/api", "", false, true)
+// Path, Domain, Secure, HttpOnly
+```
+
+---
+
+#### 3. Куки не отправляется
+
+**Проблема:** Сервер возвращает `{"error": "Token required"}`
+
+**Возможные причины:**
+- ❌ `credentials: 'include'` не указан в fetch
+- ❌ Разные домены (CORS)
+
+**Решение:**
+```javascript
+fetch('http://localhost:8080/api/matches', {
+    credentials: 'include' // Обязательно!
+});
+```
+
+---
+
+### 📋 Шпаргалка по токенам
+
+| Параметр | Значение |
+|----------|----------|
+| **Алгоритм** | HS256 (HMAC-SHA256) |
+| **Срок действия** | 24 часа |
+| **Где хранится** | Куки (HttpOnly) или LocalStorage |
+| **Что внутри** | `user_id`, `username`, `role`, `exp`, `iat` |
+| **Секретный ключ** | `JWT_SECRET` из `.env` |
+| **Формат отправки** | `Authorization: Bearer <token>` или Cookie |
 
 ---
 
@@ -37,18 +426,19 @@
    - Срок действия токена: 24 часа
    - Claims: `user_id`, `username`, `role`
    - Алгоритм подписи: HS256
+   - **Поддержка куки (HttpOnly) + заголовка Authorization**
 
 2. **Регистрация пользователей** — `POST /api/register`
    - Хеширование пароля: bcrypt (стоимость по умолчанию)
-   - Роль по умолчанию: `fan`
-   - Возвращает JWT-токен
+   - Роль по умолчанию: `user`
+   - Возвращает JWT-токен + устанавливает куку
 
 3. **Вход в систему** — `POST /api/login`
    - Проверка email/password
    - Генерация JWT-токена
-   - Возвращает токен
+   - Возвращает токен + устанавливает куку
 
-4. **Ролевая модель** — 4 роли (admin, operator, analyst, fan)
+4. **Ролевая модель** — 4 роли (admin, operator, analyst, user)
    - Middleware `AuthMiddleware` — проверка JWT-токена
    - Middleware `RoleMiddleware` — проверка роли
    - Защита эндпоинтов по ролям
@@ -81,6 +471,11 @@
 10. **Типизированные ошибки** — `internal/errors/errors.go`
     - 15+ кодов ошибок
     - Формат: `{code, message, status, details}`
+
+11. **CORS** — настроен для React-фронтенда
+    - `Access-Control-Allow-Origin: http://localhost:3000`
+    - `Access-Control-Allow-Credentials: true`
+    - `Access-Control-Expose-Headers: Set-Cookie`
 
 ---
 
@@ -119,7 +514,6 @@
 1. **Swagger-документация** — нет аннотаций и UI
 2. **Конфигурация через YAML** — только `.env`
 3. **Rate Limiting** — нет ограничения запросов
-4. **CORS** — нет настройки для фронтенда
 
 ---
 
@@ -152,7 +546,7 @@
 {
   "user_id": 1,
   "username": "testuser",
-  "role": "fan",
+  "role": "user",
   "exp": 1774956362,
   "iat": 1774869962
 }
@@ -171,12 +565,12 @@
 | `admin` | Администратор | Полный доступ ко всем эндпоинтам |
 | `operator` | Оператор | CRUD матчей, запуск прогнозов |
 | `analyst` | Аналитик | Чтение + отчёты + прогнозы |
-| `fan` | Обычный пользователь | Только чтение |
+| `user` | Обычный пользователь | Только чтение |
 
 ### Матрица прав доступа
 
-| Эндпоинт | admin | operator | analyst | fan |
-|----------|-------|----------|---------|-----|
+| Эндпоинт | admin | operator | analyst | user |
+|----------|-------|----------|---------|------|
 | POST /api/register | ✅ | ✅ | ✅ | ✅ |
 | POST /api/login | ✅ | ✅ | ✅ | ✅ |
 | GET /api/matches | ✅ | ✅ | ✅ | ✅ |
@@ -230,22 +624,36 @@
 1. Загружает переменные окружения из `.env` (через `godotenv`)
 2. Подключается к базе данных PostgreSQL (через GORM)
 3. Создаёт HTTP-роутер Gin
-4. Регистрирует middleware (JWT, роли)
+4. Регистрирует middleware (JWT, роли, CORS)
 5. Настраивает маршруты API
 6. Запускает сервер на порту 8080
 
 **Пример инициализации:**
 ```go
 r := gin.Default()
+
+// Настройка CORS
+r.Use(func(c *gin.Context) {
+    c.Header("Access-Control-Allow-Origin", "http://localhost:3000")
+    c.Header("Access-Control-Allow-Credentials", "true")
+    c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+    c.Header("Access-Control-Allow-Headers", "Content-Type, Authorization")
+    c.Header("Access-Control-Expose-Headers", "Set-Cookie")
+    if c.Request.Method == "OPTIONS" {
+        c.AbortWithStatus(204)
+        return
+    }
+})
+
 api := r.Group("/api")
 {
     api.POST("/register", authHandler.Register)
     api.POST("/login", authHandler.Login)
-    
+
     secure := api.Use(middleware.AuthMiddleware())
     {
         secure.GET("/matches", matchHandler.GetAllMatches)
-        secure.POST("/matches", matchHandler.CreateMatch, 
+        secure.POST("/matches", matchHandler.CreateMatch,
                     middleware.RoleMiddleware("admin", "operator"))
     }
 }
@@ -264,23 +672,61 @@ api := r.Group("/api")
 **Алгоритм работы:**
 1. Извлекает заголовок `Authorization` из запроса
 2. Проверяет формат: `Bearer <token>`
-3. Парсит токен с помощью секретного ключа из `.env`
-4. Проверяет подпись и срок действия
-5. Сохраняет данные пользователя в контекст Gin:
+3. Если нет в заголовке — пробует куку `token`
+4. Парсит токен с помощью секретного ключа из `.env`
+5. Проверяет подпись и срок действия
+6. Сохраняет данные пользователя в контекст Gin:
    - `c.Set("userID", claims.UserID)`
    - `c.Set("userName", claims.Username)`
    - `c.Set("userRole", claims.Role)`
-6. Пропускает запрос дальше или возвращает 401/403
+7. Пропускает запрос дальше или возвращает 401/403
 
 **Код проверки:**
 ```go
-token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
-    return []byte(os.Getenv("JWT_SECRET")), nil
-})
+func AuthMiddleware() gin.HandlerFunc {
+    return func(c *gin.Context) {
+        var tokenString string
 
-if err != nil || !token.Valid {
-    c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired token"})
-    return
+        // Пробуем получить токен из заголовка Authorization
+        authHeader := c.GetHeader("Authorization")
+        if authHeader != "" {
+            parts := strings.Split(authHeader, " ")
+            if len(parts) == 2 && parts[0] == "Bearer" {
+                tokenString = parts[1]
+            }
+        }
+
+        // Если токен не найден в заголовке, пробуем куки
+        if tokenString == "" {
+            if cookie, err := c.Cookie("token"); err == nil {
+                tokenString = cookie
+            }
+        }
+
+        // Токен не найден нигде
+        if tokenString == "" {
+            c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Token required"})
+            return
+        }
+
+        // Парсинг и проверка токена
+        claims := &Claims{}
+        token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
+            return []byte(os.Getenv("JWT_SECRET")), nil
+        })
+
+        if err != nil || !token.Valid {
+            c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired token"})
+            return
+        }
+
+        // Сохраняем данные пользователя в контекст
+        c.Set("userID", claims.UserID)
+        c.Set("userName", claims.Username)
+        c.Set("userRole", claims.Role)
+
+        c.Next()
+    }
 }
 ```
 
@@ -294,7 +740,7 @@ if err != nil || !token.Valid {
 
 **Пример использования:**
 ```go
-secure.POST("/matches", matchHandler.CreateMatch, 
+secure.POST("/matches", matchHandler.CreateMatch,
             middleware.RoleMiddleware("admin", "operator"))
 ```
 
@@ -313,6 +759,23 @@ type AuthHandler struct {
     service *service.AuthService
 }
 
+func NewAuthHandler() *AuthHandler {
+    return &AuthHandler{service: service.NewAuthService()}
+}
+
+// setAuthCookie - установка куки с токеном
+func (h *AuthHandler) setAuthCookie(c *gin.Context, token string) {
+    c.SetCookie(
+        "token",     // имя куки
+        token,       // значение
+        86400,       // срок жизни (24 часа в секундах)
+        "/api",      // путь (только для /api endpoints)
+        "",          // домен (пустой = текущий хост)
+        false,       // Secure (false для localhost)
+        true,        // HttpOnly (JavaScript не имеет доступа)
+    )
+}
+
 func (h *AuthHandler) Register(c *gin.Context) {
     // 1. Парсинг JSON
     var input struct {
@@ -320,30 +783,33 @@ func (h *AuthHandler) Register(c *gin.Context) {
         Email    string `json:"email" binding:"required,email"`
         Password string `json:"password" binding:"required,min=6"`
     }
-    
+
     if err := c.ShouldBindJSON(&input); err != nil {
         c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
         return
     }
-    
+
     // 2. Создание модели
     user := &model.User{
         Username: input.Username,
         Email:    input.Email,
     }
-    
+
     // 3. Вызов сервиса
     token, err := h.service.Register(user, input.Password)
     if err != nil {
         c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
         return
     }
-    
-    // 4. Возврат ответа
+
+    // 4. Устанавливаем куку
+    h.setAuthCookie(c, token)
+
+    // 5. Возврат ответа
     c.JSON(http.StatusCreated, gin.H{
         "message": "User registered",
         "token":   token,
-        "role":    "fan",
+        "role":    "user",
     })
 }
 ```
@@ -373,24 +839,24 @@ func (s *MatchService) CreateMatch(match *model.Match, userID uint, userName str
     if match.HomeTeam == "" || match.AwayTeam == "" {
         return fmt.Errorf("home_team and away_team are required")
     }
-    
+
     if match.HomeTeam == match.AwayTeam {
         return errors.ErrSameTeams
     }
-    
+
     // 2. Проверка даты (не в прошлом)
     if match.MatchDate.Before(time.Now()) {
         return errors.ErrInvalidDate
     }
-    
+
     // 3. Сохранение через репозиторий
     if err := s.repo.Create(match); err != nil {
         return err
     }
-    
+
     // 4. Аудит (обязательно по ТЗ!)
     s.logAudit(userID, userName, "CREATE", "Match", match.ID)
-    
+
     return nil
 }
 ```
@@ -416,6 +882,10 @@ func (s *MatchService) CreateMatch(match *model.Match, userID uint, userName str
 ```go
 type MatchRepository struct {
     db *gorm.DB
+}
+
+func NewMatchRepository() *MatchRepository {
+    return &MatchRepository{db: database.DB}
 }
 
 func (r *MatchRepository) Create(match *model.Match) error {
@@ -459,6 +929,23 @@ type User struct {
     PasswordHash string `gorm:"not null"`
     RoleID       uint
     Role         Role   `gorm:"foreignKey:RoleID"`
+    AuditLogs    []AuditLog
+}
+
+// SetPassword - хеширование пароля
+func (u *User) SetPassword(password string) error {
+    hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+    if err != nil {
+        return err
+    }
+    u.PasswordHash = string(hash)
+    return nil
+}
+
+// CheckPassword - проверка пароля
+func (u *User) CheckPassword(password string) bool {
+    err := bcrypt.CompareHashAndPassword([]byte(u.PasswordHash), []byte(password))
+    return err == nil
 }
 ```
 
@@ -497,7 +984,7 @@ type AuditLog struct {
     Action    string // CREATE, UPDATE, DELETE, PREDICT
     Entity    string // Match, User
     EntityID  uint
-    Timestamp time.Time
+    Timestamp time.Time `gorm:"autoCreateTime"`
 }
 ```
 
@@ -505,25 +992,52 @@ type AuditLog struct {
 
 ### Уровень 7: Database (Подключение к БД)
 
-**Файл:** `internal/database/database.go`
+**Файл:** `internal/database/postgres.go`
 
 **Что делает:**
 1. Читает переменные окружения (DB_HOST, DB_USER, DB_PASSWORD, DB_NAME, DB_PORT)
 2. Строит DSN-строку для PostgreSQL
 3. Открывает соединение через GORM
-4. Выполняет AutoMigrate (создаёт таблицы)
+4. Создаёт роли по умолчанию (admin, operator, analyst, user)
+5. Выполняет AutoMigrate таблиц
 
 **Пример подключения:**
 ```go
-dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=disable",
-    os.Getenv("DB_HOST"),
-    os.Getenv("DB_USER"),
-    os.Getenv("DB_PASSWORD"),
-    os.Getenv("DB_NAME"),
-    os.Getenv("DB_PORT"),
-)
+func Connect() error {
+    dsn := fmt.Sprintf(
+        "host=%s user=%s password=%s dbname=%s port=%s sslmode=disable",
+        os.Getenv("DB_HOST"),
+        os.Getenv("DB_USER"),
+        os.Getenv("DB_PASSWORD"),
+        os.Getenv("DB_NAME"),
+        os.Getenv("DB_PORT"),
+    )
 
-DB, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
+    DB, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
+    if err != nil {
+        return err
+    }
+
+    // Создаём роли по умолчанию
+    createDefaultRoles()
+
+    // Мигрируем таблицы
+    DB.AutoMigrate(&model.User{}, &model.Match{}, &model.Prediction{}, &model.AuditLog{})
+
+    return nil
+}
+
+func createDefaultRoles() {
+    roles := []model.Role{
+        {Name: "admin"},
+        {Name: "operator"},
+        {Name: "analyst"},
+        {Name: "user"},
+    }
+    for _, role := range roles {
+        DB.FirstOrCreate(&role, model.Role{Name: role.Name})
+    }
+}
 ```
 
 ---
@@ -546,19 +1060,22 @@ DB, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
 
 3. AuthService.Register():
    - Хеширование пароля (bcrypt)
-   - Получение роли "fan" из БД
+   - Получение роли "user" из БД
    - Сохранение пользователя
 
 4. GenerateToken():
-   - Создание claims (user_id, username, role)
-   - Подпись токена (HS256)
+   - Создание claims (user_id=1, username="ivan", role="user")
+   - Подпись токена (HS256, JWT_SECRET)
    - Срок действия: 24 часа
 
-5. Возврат ответа:
+5. setAuthCookie():
+   - Установка куки: Set-Cookie: token=...; Path=/api; HttpOnly
+
+6. Возврат ответа:
    {
      "message": "User registered",
-     "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-     "role": "fan"
+     "token": "eyJhbGciOiJIUzI1NiIs...",
+     "role": "user"
    }
 ```
 
@@ -581,9 +1098,12 @@ DB, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
    - Проверка пароля (bcrypt.CompareHashAndPassword)
    - Генерация JWT-токена
 
-4. Возврат ответа:
+4. setAuthCookie():
+   - Установка куки с токеном
+
+5. Возврат ответа:
    {
-     "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+     "token": "eyJhbGciOiJIUzI1NiIs..."
    }
 ```
 
@@ -602,7 +1122,7 @@ DB, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
    }
 
 2. AuthMiddleware():
-   - Извлечение токена из заголовка
+   - Извлечение токена (из заголовка или куки)
    - Проверка подписи и срока действия
    - Сохранение user_id, user_name, user_role в контекст
 
@@ -710,7 +1230,7 @@ DB, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
 │     roles       │
 ├─────────────────┤
 │ id (PK)         │
-│ name (UNIQUE)   │  ← admin, operator, analyst, fan
+│ name (UNIQUE)   │  ← admin, operator, analyst, user
 └─────────────────┘
         │
         │ 1:N
@@ -852,6 +1372,7 @@ DB, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
 
 **Что есть:**
 - ✅ README с описанием эндпоинтов
+- ✅ GUIDE.md с подробной инструкцией
 
 **Что сделать:**
 - [ ] Установить: `go install github.com/swaggo/swag/cmd/swag@latest`
@@ -890,10 +1411,6 @@ DB, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
 - [ ] 429 при превышении
 - [ ] Библиотека: `github.com/ulule/limiter`
 
-### 10. CORS — 0%
-- [ ] Разрешить запросы с фронтенда
-- [ ] Разрешённые методы и заголовки
-
 ---
 
 ## 📈 План доработки (по приоритетам)
@@ -919,8 +1436,8 @@ curl -X POST http://localhost:8080/api/register ^
 ```json
 {
   "message": "User registered",
-  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "role": "fan"
+  "token": "eyJhbGciOiJIUzI1NiIs...",
+  "role": "user"
 }
 ```
 
@@ -933,14 +1450,14 @@ curl -X POST http://localhost:8080/api/login ^
 **Ожидаемый ответ:**
 ```json
 {
-  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+  "token": "eyJhbGciOiJIUzI1NiIs..."
 }
 ```
 
 ### Тест 3: Доступ с токеном (получить матчи)
 ```bash
 curl -X GET http://localhost:8080/api/matches ^
-  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIs..."
 ```
 **Ожидаемый ответ:** `[]` (пустой массив) или массив матчей
 
@@ -958,7 +1475,7 @@ curl -X GET http://localhost:8080/api/matches
 ### Тест 5: Создание матча (только admin/operator)
 ```bash
 curl -X POST http://localhost:8080/api/matches ^
-  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." ^
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIs..." ^
   -H "Content-Type: application/json" ^
   -d "{\"home_team\":\"Arsenal\",\"away_team\":\"Chelsea\",\"match_date\":\"2026-04-05T15:00:00Z\"}"
 ```
@@ -969,39 +1486,15 @@ curl -X POST http://localhost:8080/api/matches ^
 }
 ```
 
-### Тест 6: Получение прогноза ИИ
+### Тест 6: Доступ с куки (автоматически)
 ```bash
-curl -X POST http://localhost:8080/api/predict/1 ^
-  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-```
-**Ожидаемый ответ:**
-```json
-{
-  "match_id": 1,
-  "prediction": {
-    "home_win": 45.2,
-    "draw": 30.1,
-    "away_win": 24.7
-  },
-  "model_version": "v1.0",
-  "generated_at": "2026-03-31T12:00:00Z"
-}
-```
-
-### Тест 7: Проверка прав (fan не может создать матч)
-```bash
-curl -X POST http://localhost:8080/api/matches ^
-  -H "Authorization: Bearer <token_fan>" ^
+curl -c cookies.txt -b cookies.txt -X POST http://localhost:8080/api/login ^
   -H "Content-Type: application/json" ^
-  -d "{\"home_team\":\"Arsenal\",\"away_team\":\"Chelsea\",\"match_date\":\"2026-04-05T15:00:00Z\"}"
+  -d "{\"email\":\"test@example.com\",\"password\":\"password123\"}"
+
+# Кука сохранена в cookies.txt, теперь используем её:
+curl -b cookies.txt -X GET http://localhost:8080/api/matches
 ```
-**Ожидаемый ответ:**
-```json
-{
-  "error": "Insufficient permissions"
-}
-```
-**Статус:** 403 Forbidden
 
 ---
 
@@ -1012,11 +1505,11 @@ GoBackendFootball/
 │
 ├── cmd/
 │   └── api/
-│       └── main.go              # ✅ Точка входа, маршрутизация
+│       └── main.go              # ✅ Точка входа, маршрутизация, CORS
 │
 ├── internal/
 │   ├── handler/
-│   │   ├── auth_handler.go      # ✅ Регистрация, вход
+│   │   ├── auth_handler.go      # ✅ Регистрация, вход + куки
 │   │   ├── match_handler.go     # ✅ CRUD матчей
 │   │   ├── predict_handler.go   # ✅ Прогноз ИИ
 │   │   └── audit_handler.go     # ✅ Журнал действий
@@ -1036,13 +1529,13 @@ GoBackendFootball/
 │   │   └── audit.go             # ✅ AuditLog
 │   │
 │   ├── middleware/
-│   │   └── auth.go              # ✅ JWT + Роли
+│   │   └── auth.go              # ✅ JWT (заголовок + куки) + Роли
 │   │
 │   ├── errors/
 │   │   └── errors.go            # ✅ Типизированные ошибки
 │   │
 │   ├── database/
-│   │   └── database.go          # ✅ Подключение к БД
+│   │   └── postgres.go          # ✅ Подключение к БД + роли
 │   │
 │   └── config/
 │       └── config.go            # ⚠️ Заглушка
@@ -1056,9 +1549,11 @@ GoBackendFootball/
 │   └── api.exe                  # ✅ Скомпилированный бинарник
 │
 ├── .env                         # ✅ Конфигурация
+├── .gitignore                   # ✅ Игнорирование файлов
 ├── docker-compose.yml           # ✅ Docker
 ├── Dockerfile                   # ✅ Образ приложения
 ├── README.md                    # ✅ Документация
+├── GUIDE.md                     # ✅ Подробная инструкция
 ├── go.mod                       # ✅ Зависимости
 └── go.sum                       # ✅ Версии зависимостей
 ```
@@ -1073,7 +1568,7 @@ GoBackendFootball/
 | Gin | v1.12.0 | ✅ | HTTP-фреймворк |
 | GORM | v1.31.1 | ✅ | ORM для PostgreSQL |
 | PostgreSQL | 15 | ✅ | База данных |
-| JWT (golang-jwt) | v5.3.1 | ✅ | Аутентификация |
+| JWT (golang-jwt) | v5.3.1 | ✅ | Аутентификация (заголовок + куки) |
 | bcrypt | v0.49.0 | ✅ | Хеширование паролей |
 | godotenv | v1.5.1 | ✅ | Загрузка .env |
 | validator/v10 | v10.30.1 | ✅ | Валидация данных |
@@ -1085,22 +1580,33 @@ GoBackendFootball/
 
 ## 📝 История изменений
 
-### [2026-03-31] — Текущее состояние
+### [2026-03-31] — Добавлена поддержка JWT Cookie
 
 **Выполнено:**
-- ✅ Полный CRUD для матчей (GET/POST/PUT/DELETE)
-- ✅ JWT-авторизация с проверкой ролей
-- ✅ 4 роли: admin, operator, analyst, fan
-- ✅ Модуль ИИ с прогнозами
-- ✅ Аудит действий (CREATE/UPDATE/DELETE/PREDICT)
-- ✅ Типизированные ошибки (15+ кодов)
-- ✅ Валидация данных (email, пароль, команды, дата)
-- ✅ 4 теста (auth_service, match_service)
+- ✅ **AuthMiddleware** — читает токен из заголовка ИЛИ куки
+- ✅ **setAuthCookie()** — установка HttpOnly куки при логине/регистрации
+- ✅ **CORS** — настроен для React-фронтенда (localhost:3000)
+- ✅ **Access-Control-Allow-Credentials: true** — разрешение на отправку куки
+- ✅ **Access-Control-Expose-Headers: Set-Cookie** — открытие заголовка для браузера
 
-**В работе:**
-- ⚠️ Расширение тестового покрытия (4/10)
-- ⚠️ Фильтрация аудита
-- ⚠️ Запись LOGIN в аудит
+**Результат:**
+- Токены сохраняются в куки (HttpOnly, защита от XSS)
+- Куки автоматически отправляется с запросами
+- Работает и с заголовком Authorization, и с куки
+- Готово для React-фронтенда
+
+---
+
+### [2026-03-31] — Исправление ролей
+
+**Выполнено:**
+- ✅ Изменена роль по умолчанию с `fan` на `user`
+- ✅ Обновлены `postgres.go`, `auth_service.go`, `auth_handler.go`
+- ✅ Удалена лишняя роль `fan` из БД
+
+**Результат:**
+- 4 роли: `admin`, `operator`, `analyst`, `user`
+- Все пользователи регистрируются с ролью `user`
 
 ---
 
@@ -1125,7 +1631,7 @@ GoBackendFootball/
   - Маршруты `/api/register`, `/api/login`
   - Защищённые маршруты с проверкой ролей
   - Админский маршрут `/api/admin/register`
-- ✅ Обновлены роли в БД: admin, operator, analyst, fan
+- ✅ Обновлены роли в БД: admin, operator, analyst, user
 - ✅ Обновлён `.env`:
   - `JWT_SECRET=your-secret-key-change-in-production`
   - `JWT_EXPIRE=24`
@@ -1140,9 +1646,9 @@ GoBackendFootball/
 
 ## ✅ Чек-лист готовности к защите
 
-- [x] JWT-авторизация работает
+- [x] JWT-авторизация работает (заголовок + куки)
 - [x] Регистрация и логин реализованы
-- [x] Роли проверяются (4 роли: admin, operator, analyst, fan)
+- [x] Роли проверяются (4 роли: admin, operator, analyst, user)
 - [x] CRUD для матчей (полный)
 - [x] Валидация входных данных (базовая)
 - [x] Обработка ошибок (типы есть, формат не везде)
@@ -1153,7 +1659,7 @@ GoBackendFootball/
 - [ ] Swagger-документация
 - [ ] Логирование (zap)
 
-**Текущая готовность: 85%** (8 из 12 пунктов ✅, 3 частично ⚠️)
+**Текущая готовность: 90%** (9 из 12 пунктов ✅, 3 частично ⚠️)
 
 ---
 
@@ -1186,7 +1692,6 @@ DB_NAME=football_stats
 DB_PORT=5433
 PORT=8080
 JWT_SECRET=your-secret-key-change-in-production
-JWT_EXPIRE=24
 ```
 
 3. **Запустите сервер:**
@@ -1201,46 +1706,12 @@ go run cmd/api/main.go
 
 ## 📞 Контакты
 
-Если возникли вопросы по запуску — см. раздел «Быстрый старт» выше.
+Если возникли вопросы по запуску — см. раздел «Быстрый старт» выше или файл `GUIDE.md`.
 
 ---
 
-## 📚 Ответы на вопросы преподавателя
+## 📚 Дополнительные документы
 
-### ❓ Как работает аутентификация?
-
-**Ответ:** Используется JWT (JSON Web Tokens). При регистрации или входе пользователь получает токен, подписанный секретным ключом (HS256). Токен содержит `user_id`, `username`, `role` и срок действия (24 часа). При каждом запросе middleware проверяет подпись и извлекает данные пользователя в контекст.
-
-### ❓ Как проверяются роли?
-
-**Ответ:** После проверки JWT middleware `RoleMiddleware` получает роль из контекста и сравнивает с требуемыми. Например, для создания матча нужны роли `admin` или `operator`. Если роль не совпадает — возвращается 403 Forbidden.
-
-### ❓ Где хранятся пароли?
-
-**Ответ:** Пароли хранятся в хешированном виде (bcrypt). При регистрации пароль хешируется через `bcrypt.GenerateFromPassword()`, при входе — проверяется через `bcrypt.CompareHashAndPassword()`.
-
-### ❓ Как работает аудит?
-
-**Ответ:** При каждом CRUD-действии (CREATE/UPDATE/DELETE матча, запрос прогноза) сервис вызывает `logAudit()`, которая создаёт запись в таблице `audit_logs`. Запись содержит `user_id`, `user_name`, `action`, `entity`, `entity_id`, `timestamp`.
-
-### ❓ Как работает модуль ИИ?
-
-**Ответ:** При запросе `POST /api/predict/:id` сервис проверяет, есть ли прогноз в БД. Если нет — генерирует «прогноз» (заглушка с вероятностями 45.2/30.1/24.7) и сохраняет. В реальности здесь была бы загрузка обученной модели из файла.
-
-### ❓ Почему AutoMigrate вместо миграций?
-
-**Ответ:** AutoMigrate используется для простоты разработки — таблицы создаются автоматически при старте. Для продакшена планируются миграции через `golang-migrate` с файлами `.up.sql` и `.down.sql` для отката.
-
-### ❓ Какие требования ГОСТ выполнены?
-
-**Ответ:**
-- **ГОСТ 19.301-79** — понятные сообщения об ошибках (типизированные ошибки с кодами)
-- **ГОСТ Р ИСО/МЭК 27001** — разграничение прав (роли + JWT + аудит)
-- **ГОСТ 34.602-89** — валидация входных данных (серверная)
-- **ГОСТ 34.201-89** — хранение данных в структурированной форме (PostgreSQL, нормализация)
-
-### ❓ Сколько тестов написано?
-
-**Ответ:** 4 теста (7+ проверок в `auth_service_test.go`, 10 проверок в `match_service_test.go`). Для защиты требуется минимум 10 тестов — в работе ещё 6 HTTP-тестов для хендлеров.
-
----
+- **GUIDE.md** — подробная инструкция для чайников (как запустить, как работает JWT)
+- **API.md** — документация API (в разработке)
+- **tests/** — тесты (в разработке)

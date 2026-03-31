@@ -14,16 +14,16 @@ func NewAuthService() *AuthService {
 	return &AuthService{}
 }
 
-// Register - регистрация пользователя с ролью по умолчанию (fan)
+// Register - регистрация пользователя с ролью по умолчанию (user)
 func (s *AuthService) Register(user *model.User, password string) (string, error) {
 	// Хеширование пароля
 	if err := user.SetPassword(password); err != nil {
 		return "", err
 	}
 
-	// Получение роли "fan" (роль по умолчанию)
+	// Получение роли "user" (роль по умолчанию)
 	var role model.Role
-	result := database.DB.Where("name = ?", "fan").First(&role)
+	result := database.DB.Where("name = ?", "user").First(&role)
 	if result.Error != nil {
 		// Если роль не найдена, используем роль с наименьшим ID
 		database.DB.Order("id ASC").First(&role)
