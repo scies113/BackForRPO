@@ -1,7 +1,7 @@
 # 🏗 Архитектура GoBackendFootball
 
-**Версия:** 2.0.0  
-**Дата:** 31 марта 2026 г.
+**Версия:** 3.0.0  
+**Дата:** 20 апреля 2026 г.
 
 Этот документ описывает **архитектуру** и **принцип работы** бэкенд-сервиса для управления футбольной статистикой.
 
@@ -315,10 +315,10 @@ func (h *AuthHandler) Register(c *gin.Context) {
 **Все хендлеры:**
 | Файл | Методы | Эндпоинты |
 |------|--------|-----------|
-| `auth_handler.go` | Register, RegisterAdmin, Login | POST /register, /login, /admin/register |
+| `auth_handler.go` | Register, RegisterAdmin, Login, Logout, GetMe | POST /register, /login, /logout, /admin/register, GET /me |
 | `match_handler.go` | GetAllMatches, GetMatchByID, CreateMatch, UpdateMatch, DeleteMatch | GET/POST/PUT/DELETE /matches |
 | `predict_handler.go` | GetPrediction | POST /predict/:id |
-| `audit_handler.go` | GetAuditLogs | GET /audit |
+| `audit_handler.go` | GetAuditLogs | GET /audit (фильтрация + пагинация) |
 
 ---
 
@@ -371,10 +371,10 @@ func (s *MatchService) CreateMatch(match *model.Match, userID uint, userName str
 **Все сервисы:**
 | Файл | Методы | Описание |
 |------|--------|----------|
-| `auth_service.go` | Register, RegisterWithRole, Login | Аутентификация, хеширование пароля, генерация токена |
+| `auth_service.go` | Register, RegisterWithRole, Login, logAudit | Аутентификация, хеширование, токен, LOGIN аудит |
 | `match_service.go` | CreateMatch, GetMatchByID, UpdateMatch, DeleteMatch, GetAllMatches | CRUD матчей, валидация, аудит |
 | `predict_service.go` | GetPrediction | Генерация прогноза ИИ, кэширование в БД |
-| `audit_service.go` | GetAllLogs | Получение журнала аудита |
+| `audit_service.go` | GetAllLogs, GetLogsFiltered | Журнал аудита + фильтрация + пагинация |
 
 ---
 
@@ -903,7 +903,7 @@ if match.MatchDate.Before(time.Now()) {
 **Записывается:**
 - CREATE/UPDATE/DELETE матча
 - PREDICT (запрос прогноза)
-- LOGIN (в разработке)
+- LOGIN (вход пользователя)
 
 **Таблица audit_logs:**
 ```sql
@@ -998,21 +998,25 @@ CREATE TABLE audit_logs (
 GoBackendFootball/
 │
 ├── cmd/
-│   └── api/
-│       └── main.go              # Точка входа, маршрутизация, CORS
+│   ├── api/
+│   │   └── main.go              # Точка входа, маршрутизация, CORS, Swagger UI
+│   └── migrate/
+│       └── main.go              # CLI миграций (up/down/force)
 │
 ├── internal/
-│   ├── handler/                 # Обработчики HTTP
-│   │   ├── auth_handler.go
-│   │   ├── match_handler.go
+│   ├── handler/                 # Обработчики HTTP + Swagger-аннотации
+│   │   ├── auth_handler.go      # Register, Login, Logout, GetMe
+│   │   ├── auth_handler_test.go # Тесты регистрации и логина
+│   │   ├── match_handler.go     # CRUD матчей
+│   │   ├── match_handler_test.go# Тесты авторизации и ролей
 │   │   ├── predict_handler.go
-│   │   └── audit_handler.go
+│   │   └── audit_handler.go     # Фильтрация + пагинация
 │   │
 │   ├── service/                 # Бизнес-логика
-│   │   ├── auth_service.go
+│   │   ├── auth_service.go      # + LOGIN аудит
 │   │   ├── match_service.go
 │   │   ├── predict_service.go
-│   │   └── audit_service.go
+│   │   └── audit_service.go     # + фильтрация + пагинация
 │   │
 │   ├── repository/              # Работа с БД
 │   │   └── match_repository.go
@@ -1025,11 +1029,24 @@ GoBackendFootball/
 │   ├── middleware/              # Промежуточное ПО
 │   │   └── auth.go              # JWT + Роли
 │   │
-│   ├── database/                # Подключение к БД
-│   │   └── postgres.go
+│   ├── errors/                  # Типизированные ошибки
+│   │   └── errors.go            # + RespondWithError/Success
 │   │
-│   └── errors/                  # Типизированные ошибки
-│       └── errors.go
+│   ├── logger/                  # Логирование
+│   │   └── logger.go            # Zap (dev/prod)
+│   │
+│   └── database/                # Подключение к БД
+│       └── postgres.go
+│
+├── migrations/                  # golang-migrate (5 пар)
+│   ├── 000001_create_roles.up/down.sql
+│   ├── 000002_create_users.up/down.sql
+│   ├── 000003_create_matches.up/down.sql
+│   ├── 000004_create_audit_logs.up/down.sql
+│   └── 000005_create_predictions.up/down.sql
+│
+├── docs/                        # Swagger (автогенерация)
+│   ├── docs.go / swagger.json / swagger.yaml
 │
 ├── .env                         # Переменные окружения
 ├── docker-compose.yml           # Docker-конфигурация
@@ -1052,5 +1069,5 @@ GoBackendFootball/
 
 ---
 
-**Версия документа:** 2.0.0  
-**Дата:** 31 марта 2026 г.
+**Версия документа:** 3.0.0  
+**Дата:** 20 апреля 2026 г.

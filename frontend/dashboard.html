@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Панель управления — FootballStats</title>
+    <link rel="stylesheet" href="/static/css/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container nav-container">
+            <a href="/" class="logo"><i class="fas fa-futbol"></i><span>FootballStats</span></a>
+            <ul class="nav-menu">
+                <li><a href="/dashboard" class="active">Панель</a></li>
+                <li><a href="/matches">Матчи</a></li>
+                <li><a href="/predict">Прогнозы</a></li>
+                <li><a href="/audit">Аудит</a></li>
+            </ul>
+            <div class="nav-actions"></div>
+            <div class="hamburger"><span></span><span></span><span></span></div>
+        </div>
+    </nav>
+
+    <div class="container" style="padding-top:100px">
+        <div class="dash-welcome" id="welcome">
+            <div class="loader"></div>
+        </div>
+
+        <div class="dash-grid" id="dashGrid" style="display:none">
+            <a href="/matches" class="dash-card">
+                <i class="fas fa-futbol"></i>
+                <h3>Матчи</h3>
+                <p>Просмотр и управление матчами</p>
+            </a>
+            <a href="/predict" class="dash-card">
+                <i class="fas fa-robot"></i>
+                <h3>Прогнозы ИИ</h3>
+                <p>Получить прогнозы для матчей</p>
+            </a>
+            <a href="/audit" class="dash-card" id="auditCard" style="display:none">
+                <i class="fas fa-clipboard-list"></i>
+                <h3>Журнал аудита</h3>
+                <p>История всех действий</p>
+            </a>
+            <a href="/swagger/index.html" target="_blank" class="dash-card">
+                <i class="fas fa-book"></i>
+                <h3>Swagger API</h3>
+                <p>Документация API</p>
+            </a>
+        </div>
+    </div>
+
+    <footer class="footer"><div class="container"><p>&copy; 2026 FootballStats</p></div></footer>
+
+    <script src="/static/js/api.js"></script>
+    <script src="/static/js/app.js"></script>
+    <script src="/static/js/auth.js"></script>
+    <script>
+        (async () => {
+            const ok = await Auth.requireAuth();
+            if (!ok) return;
+
+            const u = Auth.user;
+            const roleName = { admin: 'Администратор', operator: 'Оператор', analyst: 'Аналитик', user: 'Пользователь' };
+            const roleEmoji = { admin: '👑', operator: '⚙️', analyst: '📊', user: '👤' };
+
+            document.getElementById('welcome').innerHTML = `
+                <h1>Привет, ${u.username}! 👋</h1>
+                <p style="color:var(--text2);margin-bottom:12px">Добро пожаловать в панель управления FootballStats</p>
+                <span class="role-badge">${roleEmoji[u.role] || '👤'} ${roleName[u.role] || u.role}</span>
+            `;
+            document.getElementById('dashGrid').style.display = '';
+
+            // Аудит — только admin
+            if (u.role === 'admin') {
+                document.getElementById('auditCard').style.display = '';
+            }
+        })();
+    </script>
+</body>
+</html>

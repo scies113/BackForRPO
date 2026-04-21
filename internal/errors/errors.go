@@ -2,6 +2,8 @@ package errors
 
 import (
 	"net/http"
+
+	"github.com/gin-gonic/gin"
 )
 
 // ErrorCode - типизированный код ошибки
@@ -83,3 +85,27 @@ var (
 	ErrUserExists       = NewAppError(USER_EXISTS, "Пользователь уже существует", http.StatusConflict)
 	ErrInvalidRole      = NewAppError(INVALID_ROLE, "Неверная роль", http.StatusBadRequest)
 )
+
+// RespondWithError - единый ответ с ошибкой для хендлеров
+// Если ошибка типа AppError — использует её код и статус
+// Иначе — возвращает 500 Internal Server Error
+func RespondWithError(c *gin.Context, err error) {
+	if appErr, ok := err.(*AppError); ok {
+		c.JSON(appErr.Status, gin.H{
+			"code":    appErr.Code,
+			"message": appErr.Message,
+			"details": appErr.Details,
+		})
+		return
+	}
+
+	c.JSON(http.StatusInternalServerError, gin.H{
+		"code":    INTERNAL_ERROR,
+		"message": err.Error(),
+	})
+}
+
+// RespondWithSuccess - единый успешный ответ
+func RespondWithSuccess(c *gin.Context, status int, data interface{}) {
+	c.JSON(status, data)
+}

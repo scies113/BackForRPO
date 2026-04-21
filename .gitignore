@@ -1,42 +1,61 @@
-# Binaries for programs and plugins
+# ============================================================================
+#  GoBackendFootball — .gitignore
+#  Версия: 3.0.0 | Дата: 20 апреля 2026 г.
+# ============================================================================
+
+# ──────────────────────────────────────────────
+#  Скомпилированные бинарники
+# ──────────────────────────────────────────────
 *.exe
 *.exe~
 *.dll
 *.so
 *.dylib
 bin/
-dist/
+tmp/
 
-# Test binary, built with `go test -c`
-*.test
+# ──────────────────────────────────────────────
+#  Конфигурация и секреты
+# ──────────────────────────────────────────────
+.env
+.env.local
+.env.production
+*.pem
+*.key
 
-# Output of the go coverage tool
-*.out
-coverage.txt
-*.cover
-*.coverprofile
-
-# Go workspace file
-go.work
-go.work.sum
-
-# Dependency directories
+# ──────────────────────────────────────────────
+#  Зависимости Go (vendor не коммитим)
+# ──────────────────────────────────────────────
 vendor/
 
-# IDE и редакторы кода
-.idea/
+# ──────────────────────────────────────────────
+#  Тестирование и покрытие
+# ──────────────────────────────────────────────
+*.test
+*.out
+coverage.html
+coverage.txt
+*.prof
+
+# ──────────────────────────────────────────────
+#  IDE и редакторы
+# ──────────────────────────────────────────────
+
+# VS Code
 .vscode/
+
+# JetBrains (GoLand, IntelliJ)
+.idea/
+*.iml
+
+# Vim / Neovim
 *.swp
 *.swo
 *~
-.project
-.classpath
-.settings/
 
-# macOS
-.DS_Store
-.AppleDouble
-.LSOverride
+# ──────────────────────────────────────────────
+#  ОС — системные файлы
+# ──────────────────────────────────────────────
 
 # Windows
 Thumbs.db
@@ -44,53 +63,29 @@ ehthumbs.db
 Desktop.ini
 $RECYCLE.BIN/
 
-# Переменные окружения (НИКОГДА не коммитить!)
-.env
-.env.local
-.env.*.local
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
 
-# Логи
+# Linux
+*.orig
+
+# ──────────────────────────────────────────────
+#  Docker
+# ──────────────────────────────────────────────
+docker-compose.override.yml
+
+# ──────────────────────────────────────────────
+#  Логи
+# ──────────────────────────────────────────────
 *.log
 logs/
 
-# Временные файлы
-tmp/
-temp/
-*.tmp
-
-# Docker compose override (локальные настройки)
-docker-compose.override.yml
-
-# Миграции (если содержат чувствительные данные)
-# migrations/*.sql - закомментируй, если миграции должны быть в репозитории
-
-# Скомпилированная документация Swagger
-docs/
-swagger.json
-swagger.yaml
-
-# Архивы и бэкапы
-*.zip
-*.tar.gz
-*.rar
+# ──────────────────────────────────────────────
+#  Прочее
+# ──────────────────────────────────────────────
 *.bak
-*.backup
-
-# Certificates and keys (НИКОГДА не коммитить!)
-*.pem
-*.key
-*.crt
-*.p12
-*.pfx
-
-# Docker volumes (базы данных)
-docker-data/
-data/
-
-# Профили и отладочная информация
-cpu.prof
-mem.prof
-trace.prof
-
-# Go build cache
-go-build/
+*.tmp
+*.cache
