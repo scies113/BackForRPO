@@ -1,14 +1,30 @@
+// @title Football Stats API
+// @version 2.0
+// @description REST API для веб-приложения "Футбол - статистика матчей"
+// @host localhost:8080
+// @BasePath /api
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
 package main
 
 import (
 	"BackendFootball/internal/database"
 	"BackendFootball/internal/handler"
+	"BackendFootball/internal/logger"
 	"BackendFootball/internal/middleware"
+
+	_ "BackendFootball/docs"
+
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
-	"log"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
+
 	"os"
 	"path/filepath"
+
+	"go.uber.org/zap"
 )
 
 func main() {
@@ -17,10 +33,17 @@ func main() {
 		godotenv.Load(filepath.Join(dir, ".env"))
 	}
 
+	// Инициализация логгера
+	logger.Init()
+	defer logger.Sync()
+
+	logger.Info("Запуск сервера Football Stats API")
+
 	// Подключение к БД
 	if err := database.Connect(); err != nil {
-		log.Fatal("Failed to connect to database:", err)
+		logger.Fatal("Ошибка подключения к базе данных", zap.Error(err))
 	}
+	logger.Info("Подключение к БД установлено")
 
 	// Инициализация роутера
 	r := gin.Default()
@@ -56,34 +79,56 @@ func main() {
 		// Публичные route (аутентификация)
 		api.POST("/register", authHandler.Register)
 		api.POST("/login", authHandler.Login)
+		api.POST("/logout", authHandler.Logout)
 
 		// Защищенные route
-		secure := api.Use(middleware.AuthMiddleware())
+		secure := api.Group("")
+		secure.Use(middleware.AuthMiddleware())
 		{
-			// Матчи: CRUD операции
-			secure.GET("/matches", matchHandler.GetAllMatches)        // Все матчи
-			secure.GET("/matches/:id", matchHandler.GetMatchByID)     // Один матч
-			secure.POST("/matches", matchHandler.CreateMatch, middleware.RoleMiddleware("admin", "operator"))
-			secure.PUT("/matches/:id", matchHandler.UpdateMatch, middleware.RoleMiddleware("admin", "operator"))
-			secure.DELETE("/matches/:id", matchHandler.DeleteMatch, middleware.RoleMiddleware("admin", "operator"))
+			// Профиль текущего пользователя
+			secure.GET("/me", authHandler.GetMe)
+
+			// Матчи: чтение (все авторизованные)
+			secure.GET("/matches", matchHandler.GetAllMatches)
+			secure.GET("/matches/:id", matchHandler.GetMatchByID)
+
+			// Матчи: запись (admin, operator) — RoleMiddleware ПЕРЕД хендлером
+			secure.POST("/matches", middleware.RoleMiddleware("admin", "operator"), matchHandler.CreateMatch)
+			secure.PUT("/matches/:id", middleware.RoleMiddleware("admin", "operator"), matchHandler.UpdateMatch)
+			secure.DELETE("/matches/:id", middleware.RoleMiddleware("admin", "operator"), matchHandler.DeleteMatch)
 
 			// Прогнозы ИИ (operator, analyst, admin)
-			secure.POST("/predict/:id", predictHandler.GetPrediction, middleware.RoleMiddleware("admin", "operator", "analyst"))
+			secure.POST("/predict/:id", middleware.RoleMiddleware("admin", "operator", "analyst"), predictHandler.GetPrediction)
 
 			// Админские route
-			admin := secure.Use(middleware.RoleMiddleware("admin"))
+			admin := secure.Group("")
+			admin.Use(middleware.RoleMiddleware("admin"))
 			{
 				admin.POST("/admin/register", authHandler.RegisterAdmin)
-				admin.GET("/audit", auditHandler.GetAuditLogs) // Журнал действий
+				admin.GET("/audit", auditHandler.GetAuditLogs)
 			}
 		}
 	}
+
+	// Swagger UI
+	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+
+	// Фронтенд: раздаём статические файлы из папки frontend/
+	r.Static("/static", "./frontend")
+	r.StaticFile("/", "./frontend/index.html")
+	r.StaticFile("/login", "./frontend/login.html")
+	r.StaticFile("/dashboard", "./frontend/dashboard.html")
+	r.StaticFile("/matches", "./frontend/matches.html")
+	r.StaticFile("/predict", "./frontend/predict.html")
+	r.StaticFile("/audit", "./frontend/audit.html")
 
 	// Запуск сервера
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
 	}
-	log.Printf("Server starting on port %s", port)
+	logger.Info("Сервер запущен", zap.String("port", port))
+	logger.Info("Фронтенд доступен", zap.String("url", "http://localhost:"+port))
+	logger.Info("Swagger UI", zap.String("url", "http://localhost:"+port+"/swagger/index.html"))
 	r.Run(":" + port)
 }

@@ -5,6 +5,8 @@ import (
 	"BackendFootball/internal/errors"
 	"BackendFootball/internal/middleware"
 	"BackendFootball/internal/model"
+	"time"
+
 	"gorm.io/gorm"
 )
 
@@ -102,7 +104,22 @@ func (s *AuthService) Login(email, password string) (string, error) {
 		return "", errors.ErrInternalError
 	}
 
+	// Запись в аудит — LOGIN
+	s.logAudit(user.ID, user.Username, "LOGIN", "User", user.ID)
+
 	return token, nil
+}
+
+// logAudit - вспомогательная функция записи в журнал аудита
+func (s *AuthService) logAudit(userID uint, userName, action, entity string, entityID uint) {
+	database.DB.Create(&model.AuditLog{
+		UserID:    userID,
+		UserName:  userName,
+		Action:    action,
+		Entity:    entity,
+		EntityID:  entityID,
+		Timestamp: time.Now(),
+	})
 }
 
 // createDefaultRoles - создание ролей по умолчанию
@@ -111,7 +128,7 @@ func (s *AuthService) createDefaultRoles() {
 		{Name: "admin"},
 		{Name: "operator"},
 		{Name: "analyst"},
-		{Name: "fan"},
+		{Name: "user"},
 	}
 
 	for _, role := range roles {

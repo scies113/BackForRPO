@@ -1,0 +1,568 @@
+basePath: /api
+definitions:
+  BackendFootball_internal_model.AuditLog:
+    properties:
+      action:
+        description: CREATE, UPDATE, DELETE, LOGIN
+        type: string
+      createdAt:
+        type: string
+      deletedAt:
+        $ref: '#/definitions/gorm.DeletedAt'
+      entity:
+        description: Match, User
+        type: string
+      entityID:
+        type: integer
+      id:
+        type: integer
+      timestamp:
+        type: string
+      updatedAt:
+        type: string
+      userID:
+        type: integer
+      userName:
+        description: Дублируем имя на случай удаления пользователя
+        type: string
+    type: object
+  BackendFootball_internal_model.Match:
+    properties:
+      away_score:
+        type: integer
+      away_team:
+        type: string
+      away_team_id:
+        type: integer
+      createdAt:
+        type: string
+      deletedAt:
+        $ref: '#/definitions/gorm.DeletedAt'
+      home_score:
+        type: integer
+      home_team:
+        description: Для упрощения пока строкой
+        type: string
+      home_team_id:
+        type: integer
+      id:
+        type: integer
+      match_date:
+        type: string
+      prediction:
+        allOf:
+        - $ref: '#/definitions/BackendFootball_internal_model.Prediction'
+        description: Связь 1 к 1 с прогнозом
+      status:
+        description: scheduled, finished
+        type: string
+      updatedAt:
+        type: string
+    type: object
+  BackendFootball_internal_model.Prediction:
+    properties:
+      away_win_prob:
+        description: Вероятность победы гостей %
+        type: number
+      createdAt:
+        type: string
+      deletedAt:
+        $ref: '#/definitions/gorm.DeletedAt'
+      draw_prob:
+        description: Вероятность ничьей %
+        type: number
+      home_win_prob:
+        description: Вероятность победы хозяев %
+        type: number
+      id:
+        type: integer
+      is_accurate:
+        description: Сбылся ли прогноз (заполняется позже)
+        type: boolean
+      match_id:
+        type: integer
+      updatedAt:
+        type: string
+    type: object
+  BackendFootball_internal_service.AuditResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/BackendFootball_internal_model.AuditLog'
+        type: array
+      limit:
+        type: integer
+      page:
+        type: integer
+      total:
+        type: integer
+      total_pages:
+        type: integer
+    type: object
+  gorm.DeletedAt:
+    properties:
+      time:
+        type: string
+      valid:
+        description: Valid is true if Time is not NULL
+        type: boolean
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: REST API для веб-приложения "Футбол - статистика матчей"
+  title: Football Stats API
+  version: "2.0"
+paths:
+  /api/admin/register:
+    post:
+      consumes:
+      - application/json
+      description: Регистрация пользователя с указанной ролью (только для администратора)
+      parameters:
+      - description: Данные пользователя с ролью
+        in: body
+        name: input
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Пользователь зарегистрирован
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Ошибка валидации
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Не авторизован
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Недостаточно прав
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: Пользователь уже существует
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Регистрация пользователя с ролью (админ)
+      tags:
+      - auth
+  /api/audit:
+    get:
+      consumes:
+      - application/json
+      description: Получение записей журнала аудита с фильтрацией и пагинацией (только
+        для admin)
+      parameters:
+      - description: Фильтр по ID пользователя
+        in: query
+        name: user_id
+        type: string
+      - description: Фильтр по действию (CREATE, UPDATE, DELETE, LOGIN, PREDICT)
+        in: query
+        name: action
+        type: string
+      - description: 'Дата начала (формат: 2006-01-02)'
+        in: query
+        name: date_from
+        type: string
+      - description: 'Дата окончания (формат: 2006-01-02)'
+        in: query
+        name: date_to
+        type: string
+      - default: 1
+        description: Номер страницы
+        in: query
+        name: page
+        type: integer
+      - default: 50
+        description: Количество записей на странице
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/BackendFootball_internal_service.AuditResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Получение журнала аудита
+      tags:
+      - audit
+  /api/login:
+    post:
+      consumes:
+      - application/json
+      description: Аутентификация пользователя по email и паролю
+      parameters:
+      - description: Данные для входа
+        in: body
+        name: input
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Токен авторизации
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Ошибка валидации
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Неверные учётные данные
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Вход в систему
+      tags:
+      - auth
+  /api/logout:
+    post:
+      description: Удаление JWT cookie для деавторизации
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Выход выполнен
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Выход из системы
+      tags:
+      - auth
+  /api/matches:
+    get:
+      description: Получение списка всех матчей с прогнозами
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Список матчей
+          schema:
+            items:
+              $ref: '#/definitions/BackendFootball_internal_model.Match'
+            type: array
+        "401":
+          description: Не авторизован
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Внутренняя ошибка
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Получение всех матчей
+      tags:
+      - matches
+    post:
+      consumes:
+      - application/json
+      description: 'Создание нового матча (доступно: admin, operator)'
+      parameters:
+      - description: Данные матча
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/BackendFootball_internal_model.Match'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Матч создан
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Ошибка валидации
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Не авторизован
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Недостаточно прав
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Внутренняя ошибка
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Создание матча
+      tags:
+      - matches
+  /api/matches/{id}:
+    delete:
+      description: 'Удаление матча по ID (доступно: admin, operator)'
+      parameters:
+      - description: ID матча
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Матч удалён
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Некорректный ID
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Не авторизован
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Недостаточно прав
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Матч не найден
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Удаление матча
+      tags:
+      - matches
+    get:
+      description: Получение информации о конкретном матче по его ID
+      parameters:
+      - description: ID матча
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Данные матча
+          schema:
+            $ref: '#/definitions/BackendFootball_internal_model.Match'
+        "400":
+          description: Некорректный ID
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Не авторизован
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Матч не найден
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Получение матча по ID
+      tags:
+      - matches
+    put:
+      consumes:
+      - application/json
+      description: 'Обновление данных матча по ID (доступно: admin, operator)'
+      parameters:
+      - description: ID матча
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Обновлённые данные матча
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/BackendFootball_internal_model.Match'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Матч обновлён
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Ошибка валидации
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Не авторизован
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Недостаточно прав
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Матч не найден
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Обновление матча
+      tags:
+      - matches
+  /api/me:
+    get:
+      description: Возвращает данные авторизованного пользователя из JWT
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Профиль пользователя
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Не авторизован
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Получение профиля текущего пользователя
+      tags:
+      - auth
+  /api/predict/{id}:
+    post:
+      description: 'Получение прогноза результата матча от модуля ИИ (доступно: admin,
+        operator, analyst)'
+      parameters:
+      - description: ID матча
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Прогноз матча
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Некорректный ID
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Не авторизован
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Недостаточно прав
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Матч не найден
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Получение прогноза ИИ
+      tags:
+      - predictions
+  /api/register:
+    post:
+      consumes:
+      - application/json
+      description: Регистрация нового пользователя с ролью по умолчанию (user)
+      parameters:
+      - description: Данные пользователя
+        in: body
+        name: input
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Пользователь зарегистрирован
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Ошибка валидации
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: Пользователь уже существует
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Регистрация пользователя
+      tags:
+      - auth
+securityDefinitions:
+  BearerAuth:
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Вход — FootballStats</title>
+    <link rel="stylesheet" href="/static/css/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container nav-container">
+            <a href="/" class="logo"><i class="fas fa-futbol"></i><span>FootballStats</span></a>
+            <ul class="nav-menu"><li><a href="/">Главная</a></li></ul>
+            <div class="nav-actions"></div>
+        </div>
+    </nav>
+
+    <div class="auth-page">
+        <div class="auth-card">
+            <h1>⚽ FootballStats</h1>
+            <p class="subtitle">Войдите или создайте аккаунт</p>
+
+            <div class="auth-tabs">
+                <div class="auth-tab active" onclick="switchTab('login')">Вход</div>
+                <div class="auth-tab" onclick="switchTab('register')">Регистрация</div>
+            </div>
+
+            <!-- Форма входа -->
+            <form class="auth-form active" id="loginForm" onsubmit="handleLogin(event)">
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" id="loginEmail" placeholder="user@example.com" required>
+                </div>
+                <div class="form-group">
+                    <label>Пароль</label>
+                    <input type="password" id="loginPassword" placeholder="Минимум 6 символов" required minlength="6">
+                </div>
+                <button type="submit" class="btn btn-primary" id="loginBtn">
+                    <i class="fas fa-sign-in-alt"></i> Войти
+                </button>
+            </form>
+
+            <!-- Форма регистрации -->
+            <form class="auth-form" id="registerForm" onsubmit="handleRegister(event)">
+                <div class="form-group">
+                    <label>Имя пользователя</label>
+                    <input type="text" id="regUsername" placeholder="Ваше имя" required minlength="2">
+                </div>
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" id="regEmail" placeholder="user@example.com" required>
+                </div>
+                <div class="form-group">
+                    <label>Пароль</label>
+                    <input type="password" id="regPassword" placeholder="Минимум 6 символов" required minlength="6">
+                </div>
+                <button type="submit" class="btn btn-primary" id="regBtn">
+                    <i class="fas fa-user-plus"></i> Зарегистрироваться
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script src="/static/js/api.js"></script>
+    <script src="/static/js/app.js"></script>
+    <script src="/static/js/auth.js"></script>
+    <script>
+        // Переключение табов
+        function switchTab(tab) {
+            document.querySelectorAll('.auth-tab').forEach((t, i) => {
+                t.classList.toggle('active', (tab === 'login' ? i === 0 : i === 1));
+            });
+            document.getElementById('loginForm').classList.toggle('active', tab === 'login');
+            document.getElementById('registerForm').classList.toggle('active', tab === 'register');
+        }
+
+        // Если пришли по #register — переключить
+        if (location.hash === '#register') switchTab('register');
+
+        // Вход
+        async function handleLogin(e) {
+            e.preventDefault();
+            const btn = document.getElementById('loginBtn');
+            btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Вход...';
+            try {
+                await API.login(
+                    document.getElementById('loginEmail').value,
+                    document.getElementById('loginPassword').value
+                );
+                showToast('Успешный вход!', 'success');
+                setTimeout(() => window.location.href = '/dashboard', 600);
+            } catch (err) {
+                showToast(err.message, 'error');
+                btn.disabled = false; btn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Войти';
+            }
+        }
+
+        // Регистрация
+        async function handleRegister(e) {
+            e.preventDefault();
+            const btn = document.getElementById('regBtn');
+            btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Регистрация...';
+            try {
+                await API.register(
+                    document.getElementById('regUsername').value,
+                    document.getElementById('regEmail').value,
+                    document.getElementById('regPassword').value
+                );
+                showToast('Регистрация успешна!', 'success');
+                setTimeout(() => window.location.href = '/dashboard', 600);
+            } catch (err) {
+                showToast(err.message, 'error');
+                btn.disabled = false; btn.innerHTML = '<i class="fas fa-user-plus"></i> Зарегистрироваться';
+            }
+        }
+
+        // Если уже залогинен — на dashboard
+        Auth.check().then(ok => { if (ok) window.location.href = '/dashboard'; });
+    </script>
+</body>
+</html>
