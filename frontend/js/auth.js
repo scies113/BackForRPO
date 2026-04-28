@@ -1,6 +1,6 @@
 /* ========================================
    Football Stats — Auth Module
-   Проверка авторизации, редирект, UI
+   Проверка авторизации, RBAC, редирект, UI
    ======================================== */
 
 const Auth = {
@@ -14,6 +14,7 @@ const Auth = {
             return true;
         } catch {
             this.user = null;
+            this.updateNav();
             return false;
         }
     },
@@ -28,57 +29,93 @@ const Auth = {
         return true;
     },
 
-    // Если не admin — редирект
-    async requireAdmin() {
+    // ─── RBAC: Универсальный route guard ───
+    // Проверяет, что текущий пользователь имеет одну из разрешённых ролей.
+    // Если роль не совпадает — редирект на /dashboard с уведомлением.
+    async requireRole(...roles) {
         const ok = await this.requireAuth();
         if (!ok) return false;
-        if (this.user.role !== 'admin') {
-            showToast('Доступ только для администратора', 'error');
+
+        if (!roles.includes(this.user.role)) {
+            showToast('Недостаточно прав для доступа к этой странице', 'error');
             window.location.href = '/dashboard';
             return false;
         }
         return true;
     },
 
-    // Проверка роли (admin или operator)
+    // Обратная совместимость: requireAdmin()
+    async requireAdmin() {
+        return this.requireRole('admin');
+    },
+
+    // ─── Матрица доступов ───
+
+    // CRUD матчей: admin, operator
     canEdit() {
-        return this.user && (this.user.role === 'admin' || this.user.role === 'operator');
+        if (!this.user) return false;
+        return ['admin', 'operator'].includes(this.user.role);
     },
 
+    // Генерация прогнозов: admin, operator, analyst
+    // user может только ПРОСМАТРИВАТЬ уже созданные прогнозы
     canPredict() {
-        return this.user && ['admin', 'operator', 'analyst'].includes(this.user.role);
+        if (!this.user) return false;
+        return ['admin', 'operator', 'analyst'].includes(this.user.role);
     },
 
-    // Обновить навигацию — показать имя пользователя
+    // ─── Обновление навигации (Header) ───
     updateNav() {
         const navActions = document.querySelector('.nav-actions');
-        if (!navActions) return;
 
-        if (this.user) {
-            const roleBadge = {
-                admin: '👑', operator: '⚙️', analyst: '📊', user: '👤'
-            };
-            navActions.innerHTML = `
-                <span class="nav-user">
-                    <span class="nav-role">${roleBadge[this.user.role] || '👤'}</span>
-                    <span class="nav-username">${this.user.username}</span>
-                </span>
-                <button class="btn btn-outline btn-sm" onclick="Auth.logout()">Выйти</button>
-            `;
-        } else {
-            navActions.innerHTML = `
-                <a href="/login" class="btn btn-outline">Войти</a>
-                <a href="/login#register" class="btn btn-primary">Регистрация</a>
-            `;
+        // Очищаем старые классы ролей у body
+        document.body.classList.remove('role-admin', 'role-operator', 'role-analyst', 'role-user', 'role-guest');
+
+        const userRole = this.user ? this.user.role : 'guest';
+        document.body.classList.add('role-' + userRole);
+
+        // ─── Nav-actions: кнопки Войти / Профиль+Выйти ───
+        if (this.user && navActions) {
+            const roleBadge = { admin: '👑', operator: '⚙️', analyst: '📊', user: '👤' };
+            navActions.innerHTML =
+                '<span class="nav-user">' +
+                    '<span class="nav-role">' + (roleBadge[this.user.role] || '👤') + '</span>' +
+                    '<span class="nav-username">' + this.user.username + '</span>' +
+                '</span>' +
+                '<button class="btn btn-outline btn-sm" onclick="Auth.logout()">Выйти</button>';
+        } else if (navActions) {
+            navActions.innerHTML =
+                '<a href="/login" class="btn btn-outline">Войти</a>' +
+                '<a href="/login#register" class="btn btn-primary">Регистрация</a>';
         }
+
+        // ─── RBAC: Показ/скрытие элементов с data-role ───
+        // Вместо CSS [data-role]{display:none!important} (который JS не может переопределить),
+        // используем класс .role-hidden который добавляем/убираем через JS.
+        document.querySelectorAll('[data-role]').forEach(function(el) {
+            var allowed = el.getAttribute('data-role').split(',');
+            if (allowed.indexOf(userRole) !== -1) {
+                // Роль разрешена — убираем скрытие
+                el.classList.remove('role-hidden');
+            } else {
+                // Роль не разрешена — скрываем
+                el.classList.add('role-hidden');
+            }
+        });
     },
 
     async logout() {
-        try {
-            await API.logout();
-        } catch {}
+        try { await API.logout(); } catch(e) {}
         this.user = null;
         showToast('Вы вышли из системы', 'success');
-        setTimeout(() => window.location.href = '/', 500);
+        setTimeout(function() { window.location.href = '/'; }, 500);
     }
 };
+
+// ─── Начальное скрытие: сразу скрыть все data-role элементы до проверки auth ───
+// Это выполняется синхронно при загрузке скрипта, ДО вызова Auth.check()
+(function() {
+    document.querySelectorAll('[data-role]').forEach(function(el) {
+        el.classList.add('role-hidden');
+    });
+})();

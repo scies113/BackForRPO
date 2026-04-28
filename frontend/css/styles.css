@@ -16,13 +16,22 @@
     --shadow-lg: 0 20px 25px -5px rgba(0,0,0,.4);
     --radius: 10px; --radius-lg: 16px; --radius-xl: 24px;
     --transition: all .3s ease;
+    --navbar-height: 70px;
 }
 *{margin:0;padding:0;box-sizing:border-box}
-html{scroll-behavior:smooth}
-body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);line-height:1.6;min-height:100vh;overflow-x:hidden}
+html{scroll-behavior:smooth;height:100%}
+
+/* ─── Global Layout: Flex-column для sticky footer ─── */
+body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);line-height:1.6;min-height:100vh;overflow-x:hidden;display:flex;flex-direction:column}
+main{flex:1 0 auto;padding-top:var(--navbar-height)}
+
 .container{max-width:1280px;margin:0 auto;padding:0 20px}
 a{text-decoration:none;color:inherit;transition:var(--transition)}
 ul{list-style:none}
+
+/* ─── Role Based Visibility ─── */
+/* Скрытие по умолчанию через класс (JS добавляет/убирает) */
+.role-hidden { display: none !important; }
 
 /* ─── Nav ─── */
 .navbar{position:fixed;top:0;left:0;right:0;z-index:1000;background:rgba(15,23,42,.95);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);padding:15px 0}
@@ -57,7 +66,7 @@ ul{list-style:none}
 .btn:disabled{opacity:.5;cursor:not-allowed;transform:none!important}
 
 /* ─── Hero ─── */
-.hero{padding:160px 0 100px;position:relative;overflow:hidden}
+.hero{padding:100px 0 100px;position:relative;overflow:hidden}
 .hero::before{content:'';position:absolute;top:-50%;right:-20%;width:800px;height:800px;background:radial-gradient(circle,rgba(16,185,129,.1),transparent 70%);pointer-events:none}
 .hero .container{display:grid;grid-template-columns:1fr 1fr;gap:60px;align-items:center}
 .hero-title{font-size:3.5rem;font-weight:800;margin-bottom:20px;line-height:1.1}
@@ -95,7 +104,7 @@ ul{list-style:none}
 .feature-card p{color:var(--text2);font-size:.95rem;line-height:1.6}
 
 /* ─── Auth Form ─── */
-.auth-page{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:100px 20px 40px}
+.auth-page{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
 .auth-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-xl);padding:40px;width:100%;max-width:440px;box-shadow:var(--shadow-lg)}
 .auth-card h1{text-align:center;margin-bottom:8px;font-size:1.75rem}
 .auth-card .subtitle{text-align:center;color:var(--text2);margin-bottom:32px;font-size:.95rem}
@@ -123,8 +132,11 @@ ul{list-style:none}
 .dash-card h3{margin-bottom:6px}
 .dash-card p{color:var(--text2);font-size:.9rem}
 
+/* ─── Page Content (замена inline padding-top) ─── */
+.page-content{padding-top:30px;padding-bottom:40px}
+
 /* ─── Data Table ─── */
-.page-header{padding-top:100px;margin-bottom:32px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px}
+.page-header{margin-bottom:32px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px;padding-top:30px}
 .page-header h1{display:flex;align-items:center;gap:12px;font-size:1.75rem}
 .page-header h1 i{color:var(--primary)}
 .table-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden}
@@ -179,8 +191,14 @@ ul{list-style:none}
 .loader{display:flex;justify-content:center;padding:40px}.loader::after{content:'';width:40px;height:40px;border:4px solid var(--border);border-top-color:var(--primary);border-radius:50%;animation:spin .8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 
-/* ─── Footer ─── */
-.footer{background:var(--bg-card);padding:40px 0 20px;border-top:1px solid var(--border);margin-top:80px;text-align:center;color:var(--text3);font-size:.9rem}
+/* ─── Footer (прижат к низу: body=flex-column, main=flex:1, footer всегда внизу) ─── */
+.footer{background:var(--bg-card);padding:40px 0 20px;border-top:1px solid var(--border);text-align:center;color:var(--text3);font-size:.9rem;flex-shrink:0;margin-top:auto}
+
+/* ─── Access Denied Page ─── */
+.access-denied{text-align:center;padding:80px 20px}
+.access-denied i{font-size:4rem;color:var(--danger);margin-bottom:20px;display:block}
+.access-denied h2{font-size:1.5rem;margin-bottom:12px}
+.access-denied p{color:var(--text2);margin-bottom:24px}
 
 /* ─── Responsive ─── */
 @media(max-width:768px){
@@ -192,5 +210,4 @@ ul{list-style:none}
     .features-grid{grid-template-columns:1fr}
     .page-header{flex-direction:column;align-items:flex-start}
     .data-table{font-size:.85rem}.data-table th,.data-table td{padding:10px 8px}
-    .filters{flex-direction:column}
 }

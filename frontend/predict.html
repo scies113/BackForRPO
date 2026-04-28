@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Прогнозы ИИ — FootballStats</title>
+    <meta name="description" content="AI-прогнозы для футбольных матчей с вероятностями исходов.">
     <link rel="stylesheet" href="/static/css/styles.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -13,24 +14,25 @@
         <div class="container nav-container">
             <a href="/" class="logo"><i class="fas fa-futbol"></i><span>FootballStats</span></a>
             <ul class="nav-menu">
-                <li><a href="/dashboard">Панель</a></li>
-                <li><a href="/matches">Матчи</a></li>
-                <li><a href="/predict" class="active">Прогнозы</a></li>
-                <li><a href="/audit">Аудит</a></li>
+                <li data-role="admin,operator,analyst,user"><a href="/dashboard">Панель</a></li>
+                <li data-role="admin,operator,analyst,user"><a href="/matches">Матчи</a></li>
+                <li data-role="admin,operator,analyst,user"><a href="/predict" class="active">Прогнозы</a></li>
+                <li data-role="admin"><a href="/audit">Аудит</a></li>
             </ul>
             <div class="nav-actions"></div>
             <div class="hamburger"><span></span><span></span><span></span></div>
         </div>
     </nav>
 
-    <div class="container">
-        <div class="page-header">
-            <h1><i class="fas fa-robot"></i> Прогнозы ИИ</h1>
+    <main>
+        <div class="container">
+            <div class="page-header">
+                <h1><i class="fas fa-robot"></i> Прогнозы ИИ</h1>
+            </div>
+            <p style="color:var(--text2);margin-bottom:24px">Выберите матч и нажмите «Получить прогноз» — система сгенерирует вероятности исхода.</p>
+            <div id="content"><div class="loader"></div></div>
         </div>
-        <p style="color:var(--text2);margin-bottom:24px">Выберите матч и нажмите «Получить прогноз» — система сгенерирует вероятности исхода.</p>
-
-        <div id="content"><div class="loader"></div></div>
-    </div>
+    </main>
 
     <footer class="footer"><div class="container"><p>&copy; 2026 FootballStats</p></div></footer>
 
@@ -41,16 +43,11 @@
         async function load() {
             const ok = await Auth.requireAuth();
             if (!ok) return;
-
-            if (!Auth.canPredict()) {
-                document.getElementById('content').innerHTML = '<div class="no-data"><i class="fas fa-lock"></i><p>Прогнозы доступны для ролей: admin, operator, analyst</p></div>';
-                return;
-            }
-
+            Auth.updateNav();
             try {
                 const matches = await API.getMatches();
                 if (!matches || matches.length === 0) {
-                    document.getElementById('content').innerHTML = '<div class="no-data"><i class="fas fa-futbol"></i><p>Нет матчей для прогнозирования. Сначала создайте матч.</p></div>';
+                    document.getElementById('content').innerHTML = '<div class="no-data"><i class="fas fa-futbol"></i><p>Нет матчей для анализа.</p></div>';
                     return;
                 }
                 renderMatches(matches);
@@ -58,76 +55,29 @@
                 document.getElementById('content').innerHTML = `<div class="no-data"><i class="fas fa-exclamation-triangle"></i><p>${err.message}</p></div>`;
             }
         }
-
         function renderMatches(matches) {
+            const canGen = Auth.canPredict();
             let html = '';
             matches.forEach(m => {
                 const id = m.ID || m.id;
-                html += `
-                <div class="predict-card" id="match-${id}">
-                    <div class="predict-teams">
-                        <span>${m.home_team}</span>
-                        <span class="predict-vs">VS</span>
-                        <span>${m.away_team}</span>
-                    </div>
-                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-                        <span style="color:var(--text3);font-size:.85rem">${formatDateShort(m.match_date || m.date)} • ${m.home_score}:${m.away_score}</span>
-                        <button class="btn btn-secondary btn-sm" id="btn-${id}" onclick="predict(${id})">
-                            <i class="fas fa-brain"></i> Получить прогноз
-                        </button>
-                    </div>
-                    <div id="result-${id}"></div>
-                </div>`;
+                const p = m.prediction;
+                html += `<div class="predict-card" id="match-${id}"><div class="predict-teams"><span>${m.home_team}</span><span class="predict-vs">VS</span><span>${m.away_team}</span></div><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><span style="color:var(--text3);font-size:.85rem">${formatDateShort(m.match_date||m.date)} • ${m.home_score}:${m.away_score}</span>${!p&&canGen?`<button class="btn btn-secondary btn-sm" id="btn-${id}" onclick="predict(${id})"><i class="fas fa-brain"></i> Получить прогноз</button>`:(!p&&!canGen?'<span style="font-size:.8rem;color:var(--text3)"><i class="fas fa-clock"></i> Прогноз ожидается</span>':'')}</div><div id="result-${id}">${p?renderProbs(p):''}</div></div>`;
             });
             document.getElementById('content').innerHTML = html;
+            matches.forEach(m => { if (m.prediction) animateProbs(m.ID||m.id, m.prediction) });
         }
-
+        function renderProbs(p) {
+            const hw=Math.round(p.home_win_prob||0), dw=Math.round(p.draw_prob||0), aw=Math.round(p.away_win_prob||0);
+            return `<div class="prob-bar"><div class="prob-label"><span>🏠 Победа хозяев</span><span>${hw}%</span></div><div class="prob-track"><div class="prob-fill home" style="width:0"></div></div></div><div class="prob-bar"><div class="prob-label"><span>🤝 Ничья</span><span>${dw}%</span></div><div class="prob-track"><div class="prob-fill draw" style="width:0"></div></div></div><div class="prob-bar"><div class="prob-label"><span>✈️ Победа гостей</span><span>${aw}%</span></div><div class="prob-track"><div class="prob-fill away" style="width:0"></div></div></div>`;
+        }
+        function animateProbs(id, p) {
+            const hw=Math.round(p.home_win_prob||0), dw=Math.round(p.draw_prob||0), aw=Math.round(p.away_win_prob||0);
+            setTimeout(() => { const f=document.querySelectorAll(`#result-${id} .prob-fill`);if(f[0])f[0].style.width=hw+'%';if(f[1])f[1].style.width=dw+'%';if(f[2])f[2].style.width=aw+'%' }, 100);
+        }
         async function predict(id) {
-            const btn = document.getElementById('btn-' + id);
-            btn.disabled = true;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Генерация...';
-
-            try {
-                const res = await API.getPrediction(id);
-                const p = res.prediction || res;
-                const hw = Math.round((p.home_win_prob || p.home_win || 0) * 100);
-                const dw = Math.round((p.draw_prob || p.draw || 0) * 100);
-                const aw = Math.round((p.away_win_prob || p.away_win || 0) * 100);
-
-                document.getElementById('result-' + id).innerHTML = `
-                    <div class="prob-bar">
-                        <div class="prob-label"><span>🏠 Победа хозяев</span><span>${hw}%</span></div>
-                        <div class="prob-track"><div class="prob-fill home" style="width:0"></div></div>
-                    </div>
-                    <div class="prob-bar">
-                        <div class="prob-label"><span>🤝 Ничья</span><span>${dw}%</span></div>
-                        <div class="prob-track"><div class="prob-fill draw" style="width:0"></div></div>
-                    </div>
-                    <div class="prob-bar">
-                        <div class="prob-label"><span>✈️ Победа гостей</span><span>${aw}%</span></div>
-                        <div class="prob-track"><div class="prob-fill away" style="width:0"></div></div>
-                    </div>
-                `;
-
-                // Анимация прогресс-баров
-                setTimeout(() => {
-                    const fills = document.querySelectorAll(`#result-${id} .prob-fill`);
-                    if (fills[0]) fills[0].style.width = hw + '%';
-                    if (fills[1]) fills[1].style.width = dw + '%';
-                    if (fills[2]) fills[2].style.width = aw + '%';
-                }, 100);
-
-                btn.innerHTML = '<i class="fas fa-check"></i> Готово';
-                btn.classList.remove('btn-secondary');
-                btn.classList.add('btn-ghost');
-                showToast('Прогноз получен!', 'success');
-            } catch (err) {
-                showToast(err.message, 'error');
-                btn.disabled = false;
-                btn.innerHTML = '<i class="fas fa-brain"></i> Получить прогноз';
-            }
+            const btn=document.getElementById('btn-'+id);if(!btn)return;btn.disabled=true;btn.innerHTML='<i class="fas fa-spinner fa-spin"></i>...';
+            try{const res=await API.getPrediction(id);const p=res.prediction||res;document.getElementById('result-'+id).innerHTML=renderProbs(p);animateProbs(id,p);btn.remove();showToast('Прогноз получен!','success')}catch(err){showToast(err.message,'error');btn.disabled=false;btn.innerHTML='<i class="fas fa-brain"></i> Получить прогноз'}
         }
-
         load();
     </script>
 </body>

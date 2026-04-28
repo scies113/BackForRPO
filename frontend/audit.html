@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Журнал аудита — FootballStats</title>
+    <meta name="description" content="Журнал аудита действий пользователей в системе FootballStats.">
     <link rel="stylesheet" href="/static/css/styles.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -13,42 +14,41 @@
         <div class="container nav-container">
             <a href="/" class="logo"><i class="fas fa-futbol"></i><span>FootballStats</span></a>
             <ul class="nav-menu">
-                <li><a href="/dashboard">Панель</a></li>
-                <li><a href="/matches">Матчи</a></li>
-                <li><a href="/predict">Прогнозы</a></li>
-                <li><a href="/audit" class="active">Аудит</a></li>
+                <li data-role="admin,operator,analyst,user"><a href="/dashboard">Панель</a></li>
+                <li data-role="admin,operator,analyst,user"><a href="/matches">Матчи</a></li>
+                <li data-role="admin,operator,analyst,user"><a href="/predict">Прогнозы</a></li>
+                <li data-role="admin"><a href="/audit" class="active">Аудит</a></li>
             </ul>
             <div class="nav-actions"></div>
             <div class="hamburger"><span></span><span></span><span></span></div>
         </div>
     </nav>
 
-    <div class="container">
-        <div class="page-header">
-            <h1><i class="fas fa-clipboard-list"></i> Журнал аудита</h1>
+    <main>
+        <div class="container">
+            <div class="page-header">
+                <h1><i class="fas fa-clipboard-list"></i> Журнал аудита</h1>
+            </div>
+            <div class="filters">
+                <select id="actionFilter">
+                    <option value="">Все действия</option>
+                    <option value="LOGIN">LOGIN</option>
+                    <option value="CREATE">CREATE</option>
+                    <option value="UPDATE">UPDATE</option>
+                    <option value="DELETE">DELETE</option>
+                    <option value="PREDICT">PREDICT</option>
+                </select>
+                <input type="date" id="dateFrom" title="Дата от">
+                <input type="date" id="dateTo" title="Дата до">
+                <button class="btn btn-primary btn-sm" onclick="loadLogs()"><i class="fas fa-search"></i> Фильтр</button>
+                <button class="btn btn-ghost btn-sm" onclick="resetFilters()"><i class="fas fa-times"></i> Сброс</button>
+            </div>
+            <div class="table-card">
+                <div id="tableBody"><div class="loader"></div></div>
+            </div>
+            <div class="pagination" id="pagination"></div>
         </div>
-
-        <div class="filters">
-            <select id="actionFilter">
-                <option value="">Все действия</option>
-                <option value="LOGIN">LOGIN</option>
-                <option value="CREATE">CREATE</option>
-                <option value="UPDATE">UPDATE</option>
-                <option value="DELETE">DELETE</option>
-                <option value="PREDICT">PREDICT</option>
-            </select>
-            <input type="date" id="dateFrom" title="Дата от">
-            <input type="date" id="dateTo" title="Дата до">
-            <button class="btn btn-primary btn-sm" onclick="loadLogs()"><i class="fas fa-search"></i> Фильтр</button>
-            <button class="btn btn-ghost btn-sm" onclick="resetFilters()"><i class="fas fa-times"></i> Сброс</button>
-        </div>
-
-        <div class="table-card">
-            <div id="tableBody"><div class="loader"></div></div>
-        </div>
-
-        <div class="pagination" id="pagination"></div>
-    </div>
+    </main>
 
     <footer class="footer"><div class="container"><p>&copy; 2026 FootballStats</p></div></footer>
 
@@ -60,28 +60,20 @@
         const limit = 20;
 
         async function init() {
-            const ok = await Auth.requireAdmin();
+            // Защита роута: только admin может просматривать аудит
+            const ok = await Auth.requireRole('admin');
             if (!ok) return;
             loadLogs();
         }
 
         async function loadLogs(page) {
             if (page) currentPage = page;
-
-            const params = {
-                page: currentPage,
-                limit: limit,
-                action: document.getElementById('actionFilter').value,
-                date_from: document.getElementById('dateFrom').value,
-                date_to: document.getElementById('dateTo').value
-            };
-
+            const params = { page: currentPage, limit: limit, action: document.getElementById('actionFilter').value, date_from: document.getElementById('dateFrom').value, date_to: document.getElementById('dateTo').value };
             try {
                 const res = await API.getAuditLogs(params);
                 const logs = res.data || res;
                 const total = res.total || 0;
                 const totalPages = res.total_pages || Math.ceil(total / limit) || 1;
-
                 renderTable(Array.isArray(logs) ? logs : []);
                 renderPagination(totalPages);
             } catch (err) {
@@ -90,29 +82,13 @@
         }
 
         function renderTable(logs) {
-            if (logs.length === 0) {
-                document.getElementById('tableBody').innerHTML = '<div class="no-data"><i class="fas fa-clipboard-list"></i><p>Нет записей</p></div>';
-                return;
-            }
-
-            const actionColors = {
-                LOGIN: 'color:var(--secondary)', CREATE: 'color:var(--success)',
-                UPDATE: 'color:var(--accent)', DELETE: 'color:var(--danger)', PREDICT: 'color:#8b5cf6'
-            };
-
-            let html = `<table class="data-table">
-                <thead><tr><th>ID</th><th>Пользователь</th><th>Действие</th><th>Сущность</th><th>ID сущности</th><th>Дата</th></tr></thead><tbody>`;
-
+            if (logs.length === 0) { document.getElementById('tableBody').innerHTML = '<div class="no-data"><i class="fas fa-clipboard-list"></i><p>Нет записей</p></div>'; return; }
+            const actionColors = { LOGIN:'color:var(--secondary)', CREATE:'color:var(--success)', UPDATE:'color:var(--accent)', DELETE:'color:var(--danger)', PREDICT:'color:#8b5cf6' };
+            let html = `<table class="data-table"><thead><tr><th>ID</th><th>Пользователь</th><th>Действие</th><th>Сущность</th><th>ID сущности</th><th>Дата</th></tr></thead><tbody>`;
             logs.forEach(l => {
                 const style = actionColors[l.action] || '';
-                html += `<tr>
-                    <td>${l.ID || l.id}</td>
-                    <td>${l.user_id}</td>
-                    <td><strong style="${style}">${l.action}</strong></td>
-                    <td>${l.entity_type || '—'}</td>
-                    <td>${l.entity_id || '—'}</td>
-                    <td>${formatDate(l.CreatedAt || l.created_at || l.timestamp)}</td>
-                </tr>`;
+                const userDisplay = l.user_name || `ID: ${l.user_id}`;
+                html += `<tr><td>${l.ID||l.id}</td><td>${userDisplay}</td><td><strong style="${style}">${l.action}</strong></td><td>${l.entity_type||'—'}</td><td>${l.entity_id||'—'}</td><td>${formatDate(l.timestamp||l.CreatedAt||l.created_at)}</td></tr>`;
             });
             html += '</tbody></table>';
             document.getElementById('tableBody').innerHTML = html;
@@ -120,23 +96,14 @@
 
         function renderPagination(totalPages) {
             if (totalPages <= 1) { document.getElementById('pagination').innerHTML = ''; return; }
-
-            let html = `<button ${currentPage <= 1 ? 'disabled' : ''} onclick="loadLogs(${currentPage - 1})"><i class="fas fa-chevron-left"></i></button>`;
-            for (let i = 1; i <= totalPages && i <= 10; i++) {
-                html += `<button class="${i === currentPage ? 'active' : ''}" onclick="loadLogs(${i})">${i}</button>`;
-            }
-            html += `<button ${currentPage >= totalPages ? 'disabled' : ''} onclick="loadLogs(${currentPage + 1})"><i class="fas fa-chevron-right"></i></button>`;
+            let html = `<button ${currentPage<=1?'disabled':''} onclick="loadLogs(${currentPage-1})"><i class="fas fa-chevron-left"></i></button>`;
+            for (let i=1; i<=totalPages && i<=10; i++) html += `<button class="${i===currentPage?'active':''}" onclick="loadLogs(${i})">${i}</button>`;
+            html += `<button ${currentPage>=totalPages?'disabled':''} onclick="loadLogs(${currentPage+1})"><i class="fas fa-chevron-right"></i></button>`;
             html += `<span class="page-info">Стр. ${currentPage} из ${totalPages}</span>`;
             document.getElementById('pagination').innerHTML = html;
         }
 
-        function resetFilters() {
-            document.getElementById('actionFilter').value = '';
-            document.getElementById('dateFrom').value = '';
-            document.getElementById('dateTo').value = '';
-            currentPage = 1;
-            loadLogs();
-        }
+        function resetFilters() { document.getElementById('actionFilter').value='';document.getElementById('dateFrom').value='';document.getElementById('dateTo').value='';currentPage=1;loadLogs() }
 
         init();
     </script>

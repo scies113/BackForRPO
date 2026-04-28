@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Football Stats — Статистика матчей</title>
+    <meta name="description" content="Управляйте матчами, анализируйте статистику и получайте прогнозы на основе ИИ. Полный CRUD, ролевая модель и журнал аудита.">
     <link rel="stylesheet" href="/static/css/styles.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -13,10 +14,10 @@
         <div class="container nav-container">
             <a href="/" class="logo"><i class="fas fa-futbol"></i><span>FootballStats</span></a>
             <ul class="nav-menu">
-                <li><a href="/" class="active">Главная</a></li>
-                <li><a href="/matches">Матчи</a></li>
-                <li><a href="/predict">Прогнозы</a></li>
-                <li><a href="/audit">Аудит</a></li>
+                <li data-role="admin,operator,analyst,user"><a href="/" class="active">Главная</a></li>
+                <li data-role="admin,operator,analyst,user"><a href="/matches">Матчи</a></li>
+                <li data-role="admin,operator,analyst,user"><a href="/predict">Прогнозы</a></li>
+                <li data-role="admin"><a href="/audit">Аудит</a></li>
             </ul>
             <div class="nav-actions">
                 <a href="/login" class="btn btn-outline btn-sm">Войти</a>
@@ -26,58 +27,60 @@
         </div>
     </nav>
 
-    <section class="hero">
-        <div class="container">
-            <div class="hero-content">
-                <h1 class="hero-title">Футбольная статистика<br><span>с AI-прогнозами</span></h1>
-                <p class="hero-subtitle">Управляйте матчами, анализируйте статистику и получайте прогнозы на основе искусственного интеллекта. Полный CRUD, ролевая модель и журнал аудита.</p>
-                <div class="hero-buttons">
-                    <a href="/login" class="btn btn-primary btn-lg"><i class="fas fa-sign-in-alt"></i> Начать работу</a>
-                    <a href="/swagger/index.html" class="btn btn-outline btn-lg" target="_blank"><i class="fas fa-book"></i> API Docs</a>
+    <main>
+        <section class="hero">
+            <div class="container">
+                <div class="hero-content">
+                    <h1 class="hero-title">Футбольная статистика<br><span>с AI-прогнозами</span></h1>
+                    <p class="hero-subtitle">Управляйте матчами, анализируйте статистику и получайте прогнозы на основе искусственного интеллекта. Полный CRUD, ролевая модель и журнал аудита.</p>
+                    <div class="hero-buttons">
+                        <a href="/login" class="btn btn-primary btn-lg"><i class="fas fa-sign-in-alt"></i> Начать работу</a>
+                        <a href="/swagger/index.html" class="btn btn-outline btn-lg" target="_blank"><i class="fas fa-book"></i> API Docs</a>
+                    </div>
+                    <div class="hero-stats">
+                        <div class="stat-item"><span class="stat-number">22</span><span class="stat-label">Тестов</span></div>
+                        <div class="stat-item"><span class="stat-number">13</span><span class="stat-label">Эндпоинтов</span></div>
+                        <div class="stat-item"><span class="stat-number">4</span><span class="stat-label">Роли</span></div>
+                    </div>
                 </div>
-                <div class="hero-stats">
-                    <div class="stat-item"><span class="stat-number">22</span><span class="stat-label">Тестов</span></div>
-                    <div class="stat-item"><span class="stat-number">13</span><span class="stat-label">Эндпоинтов</span></div>
-                    <div class="stat-item"><span class="stat-number">4</span><span class="stat-label">Роли</span></div>
+                <div class="hero-visual">
+                    <div class="floating-card fc1"><i class="fas fa-chart-line"></i><span>Аналитика</span></div>
+                    <div class="floating-card fc2"><i class="fas fa-robot"></i><span>AI Прогноз</span></div>
+                    <div class="floating-card fc3"><i class="fas fa-shield-alt"></i><span>JWT Auth</span></div>
                 </div>
             </div>
-            <div class="hero-visual">
-                <div class="floating-card fc1"><i class="fas fa-chart-line"></i><span>Аналитика</span></div>
-                <div class="floating-card fc2"><i class="fas fa-robot"></i><span>AI Прогноз</span></div>
-                <div class="floating-card fc3"><i class="fas fa-shield-alt"></i><span>JWT Auth</span></div>
-            </div>
-        </div>
-    </section>
+        </section>
 
-    <section class="section">
-        <div class="container">
-            <div class="section-header">
-                <h2 class="section-title"><i class="fas fa-th-large"></i> Возможности системы</h2>
+        <section class="section">
+            <div class="container">
+                <div class="section-header">
+                    <h2 class="section-title"><i class="fas fa-th-large"></i> Возможности системы</h2>
+                </div>
+                <div class="features-grid">
+                    <div class="feature-card">
+                        <div class="feature-icon green"><i class="fas fa-futbol"></i></div>
+                        <h3>CRUD матчей</h3>
+                        <p>Создание, просмотр, редактирование и удаление матчей. Валидация данных на сервере. Swagger-документация для каждого эндпоинта.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon blue"><i class="fas fa-robot"></i></div>
+                        <h3>Прогнозы ИИ</h3>
+                        <p>Получение прогнозов с вероятностями для каждого матча. Кэширование результатов в базе данных для быстрого доступа.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon purple"><i class="fas fa-user-shield"></i></div>
+                        <h3>4 роли доступа</h3>
+                        <p>Admin, Operator, Analyst, User — каждая роль с уникальными правами. JWT-авторизация через заголовок и HttpOnly Cookie.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon amber"><i class="fas fa-clipboard-list"></i></div>
+                        <h3>Журнал аудита</h3>
+                        <p>Запись всех действий: LOGIN, CREATE, UPDATE, DELETE, PREDICT. Фильтрация по пользователю, действию и датам.</p>
+                    </div>
+                </div>
             </div>
-            <div class="features-grid">
-                <div class="feature-card">
-                    <div class="feature-icon green"><i class="fas fa-futbol"></i></div>
-                    <h3>CRUD матчей</h3>
-                    <p>Создание, просмотр, редактирование и удаление матчей. Валидация данных на сервере. Swagger-документация для каждого эндпоинта.</p>
-                </div>
-                <div class="feature-card">
-                    <div class="feature-icon blue"><i class="fas fa-robot"></i></div>
-                    <h3>Прогнозы ИИ</h3>
-                    <p>Получение прогнозов с вероятностями для каждого матча. Кэширование результатов в базе данных для быстрого доступа.</p>
-                </div>
-                <div class="feature-card">
-                    <div class="feature-icon purple"><i class="fas fa-user-shield"></i></div>
-                    <h3>4 роли доступа</h3>
-                    <p>Admin, Operator, Analyst, User — каждая роль с уникальными правами. JWT-авторизация через заголовок и HttpOnly Cookie.</p>
-                </div>
-                <div class="feature-card">
-                    <div class="feature-icon amber"><i class="fas fa-clipboard-list"></i></div>
-                    <h3>Журнал аудита</h3>
-                    <p>Запись всех действий: LOGIN, CREATE, UPDATE, DELETE, PREDICT. Фильтрация по пользователю, действию и датам.</p>
-                </div>
-            </div>
-        </div>
-    </section>
+        </section>
+    </main>
 
     <footer class="footer">
         <div class="container">

@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Панель управления — FootballStats</title>
+    <meta name="description" content="Панель управления FootballStats — доступ к матчам, прогнозам и аудиту.">
     <link rel="stylesheet" href="/static/css/styles.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -13,44 +14,46 @@
         <div class="container nav-container">
             <a href="/" class="logo"><i class="fas fa-futbol"></i><span>FootballStats</span></a>
             <ul class="nav-menu">
-                <li><a href="/dashboard" class="active">Панель</a></li>
-                <li><a href="/matches">Матчи</a></li>
-                <li><a href="/predict">Прогнозы</a></li>
-                <li><a href="/audit">Аудит</a></li>
+                <li data-role="admin,operator,analyst,user"><a href="/dashboard" class="active">Панель</a></li>
+                <li data-role="admin,operator,analyst,user"><a href="/matches">Матчи</a></li>
+                <li data-role="admin,operator,analyst,user"><a href="/predict">Прогнозы</a></li>
+                <li data-role="admin"><a href="/audit">Аудит</a></li>
             </ul>
             <div class="nav-actions"></div>
             <div class="hamburger"><span></span><span></span><span></span></div>
         </div>
     </nav>
 
-    <div class="container" style="padding-top:100px">
-        <div class="dash-welcome" id="welcome">
-            <div class="loader"></div>
-        </div>
+    <main>
+        <div class="container page-content">
+            <div class="dash-welcome" id="welcome">
+                <div class="loader"></div>
+            </div>
 
-        <div class="dash-grid" id="dashGrid" style="display:none">
-            <a href="/matches" class="dash-card">
-                <i class="fas fa-futbol"></i>
-                <h3>Матчи</h3>
-                <p>Просмотр и управление матчами</p>
-            </a>
-            <a href="/predict" class="dash-card">
-                <i class="fas fa-robot"></i>
-                <h3>Прогнозы ИИ</h3>
-                <p>Получить прогнозы для матчей</p>
-            </a>
-            <a href="/audit" class="dash-card" id="auditCard" style="display:none">
-                <i class="fas fa-clipboard-list"></i>
-                <h3>Журнал аудита</h3>
-                <p>История всех действий</p>
-            </a>
-            <a href="/swagger/index.html" target="_blank" class="dash-card">
-                <i class="fas fa-book"></i>
-                <h3>Swagger API</h3>
-                <p>Документация API</p>
-            </a>
+            <div class="dash-grid" id="dashGrid" style="display:none">
+                <a href="/matches" class="dash-card" data-role="admin,operator,analyst,user">
+                    <i class="fas fa-futbol"></i>
+                    <h3>Матчи</h3>
+                    <p>Просмотр и управление матчами</p>
+                </a>
+                <a href="/predict" class="dash-card" data-role="admin,operator,analyst,user">
+                    <i class="fas fa-robot"></i>
+                    <h3>Прогнозы ИИ</h3>
+                    <p>Получить прогнозы для матчей</p>
+                </a>
+                <a href="/audit" class="dash-card" data-role="admin">
+                    <i class="fas fa-clipboard-list"></i>
+                    <h3>Журнал аудита</h3>
+                    <p>История всех действий</p>
+                </a>
+                <a href="/swagger/index.html" target="_blank" class="dash-card" data-role="admin,operator">
+                    <i class="fas fa-book"></i>
+                    <h3>Swagger API</h3>
+                    <p>Документация API</p>
+                </a>
+            </div>
         </div>
-    </div>
+    </main>
 
     <footer class="footer"><div class="container"><p>&copy; 2026 FootballStats</p></div></footer>
 
@@ -72,11 +75,6 @@
                 <span class="role-badge">${roleEmoji[u.role] || '👤'} ${roleName[u.role] || u.role}</span>
             `;
             document.getElementById('dashGrid').style.display = '';
-
-            // Аудит — только admin
-            if (u.role === 'admin') {
-                document.getElementById('auditCard').style.display = '';
-            }
         })();
     </script>
 </body>
