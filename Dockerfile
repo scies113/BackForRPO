@@ -1,28 +1,42 @@
-# Используйте ту же версию, что в go.mod
-FROM golang:1.25.0
+# ==========================================
+# Этап 1: Сборка (Builder)
+# ==========================================
+FROM golang:1.25.0-alpine AS builder
 
-# Добавьте переменные окружения для го-модулей
-ENV GOPROXY=https://proxy.golang.org,direct
-ENV GOSUMDB=off
+# Включаем нужные переменные ДО начала сборки
+ENV CGO_ENABLED=0 \
+    GOOS=linux \
+    GOPROXY=https://proxy.golang.org,direct \
+    GOSUMDB=off
 
 WORKDIR /app
 
-# Копируем только модульные файлы сначала (кэширование!)
+# Сначала копируем только файлы зависимостей для кэширования слоя
 COPY go.mod go.sum ./
-
-# Скачиваем зависимости
 RUN go mod download
 
-# Копируем весь проект
+# Копируем остальной исходный код
 COPY . .
 
-# Собираем
-RUN go build -o main ./cmd/api
+# Собираем бинарник. 
+# Флаги -ldflags="-s -w" вырезают отладочную информацию, делая бинарник еще меньше!
+RUN go build -ldflags="-s -w" -o main ./cmd/api
 
+# ==========================================
+# Этап 2: Финальный образ (Production)
+# ==========================================
+# Берем пустой и супер-легкий alpine (весит около 5 МБ)
+FROM alpine:latest
+
+WORKDIR /root/
+
+# Копируем ТОЛЬКО готовый бинарник и статику из первого этапа
+COPY --from=builder /app/main .
+COPY --from=builder /app/frontend ./frontend
+COPY --from=builder /app/.env.example ./.env
+
+# Обозначаем порт
 EXPOSE 8080
-CMD ["./main"]
 
-ENV GOPROXY=https://proxy.golang.org,direct
-ENV GOSUMDB=off
-ENV CGO_ENABLED=0
-ENV GOOS=linux
+# Запускаем
+CMD ["./main"]

@@ -1,35 +1,41 @@
-services:
-  db:
-    image: postgres:15
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: 1234567890
-      POSTGRES_DB: football_stats
-    ports:
-      - "5433:5432"
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
+version: '3.8'
 
-  backend:
-    build: .
+services:
+  # База данных PostgreSQL
+  db:
+    image: postgres:15-alpine
+    container_name: football-db
+    restart: always
+    environment:
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+      POSTGRES_DB: ${DB_NAME:-football_db}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  # Твой новый оптимизированный бэкенд на Go
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: football-app
+    restart: always
     ports:
       - "8080:8080"
     environment:
+      # Важно: хост базы данных теперь "db" (имя сервиса выше)
       DB_HOST: db
-      DB_USER: postgres
-      DB_PASSWORD: 1234567890
-      DB_NAME: football_stats
-      DB_PORT: "5432"
-      PORT: "8080"
+      DB_PORT: 5432
+      DB_USER: ${DB_USER:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:-postgres}
+      DB_NAME: ${DB_NAME:-football_db}
+      DB_SSLMODE: disable
+      JWT_SECRET: ${JWT_SECRET:-super-secret-key-123}
+      PORT: 8080
     depends_on:
-      db:
-        condition: service_healthy
-    restart: on-failure
+      - db
 
 volumes:
-  pgdata:
+  postgres_data:
