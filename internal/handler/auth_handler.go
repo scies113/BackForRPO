@@ -5,6 +5,8 @@ import (
 	"BackendFootball/internal/model"
 	"BackendFootball/internal/service"
 	"net/http"
+	"os"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 )
@@ -17,21 +19,41 @@ func NewAuthHandler() *AuthHandler {
 	return &AuthHandler{service: service.NewAuthService()}
 }
 
-// setAuthCookie - установка куки с токеном
+// isSecureCookie — проверяет переменную окружения COOKIE_SECURE
+// В продакшене (HTTPS) должна быть true, для localhost — false
+func isSecureCookie() bool {
+	val := strings.ToLower(strings.TrimSpace(os.Getenv("COOKIE_SECURE")))
+	return val == "true" || val == "1"
+}
+
+// setAuthCookie — установка HttpOnly куки с токеном авторизации
+// Безопасность:
+//   - HttpOnly: true — JavaScript не имеет доступа (защита от XSS)
+//   - Secure: env-driven — передаётся только по HTTPS в продакшене
+//   - SameSite=Lax — защита от CSRF, разрешает top-level навигацию
 func (h *AuthHandler) setAuthCookie(c *gin.Context, token string) {
-	// HttpOnly - JavaScript не имеет доступа (защита от XSS)
-	// Secure - передаётся только по HTTPS (в продакшене)
-	// SameSite=Lax - защита от CSRF
-	
-	c.SetCookie(
-		"token",     // имя куки
-		token,       // значение
-		86400,       // срок жизни (24 часа в секундах)
-		"/api",      // путь (только для /api endpoints)
-		"",          // домен (пустой = текущий хост)
-		false,       // Secure (false для localhost)
-		true,        // HttpOnly
-	)
+	http.SetCookie(c.Writer, &http.Cookie{
+		Name:     "token",
+		Value:    token,
+		Path:     "/api",
+		MaxAge:   86400, // 24 часа
+		HttpOnly: true,  // Блокирует доступ из JS (защита от XSS)
+		Secure:   isSecureCookie(),
+		SameSite: http.SameSiteLaxMode, // Защита от CSRF
+	})
+}
+
+// clearAuthCookie — удаление куки авторизации (logout)
+func (h *AuthHandler) clearAuthCookie(c *gin.Context) {
+	http.SetCookie(c.Writer, &http.Cookie{
+		Name:     "token",
+		Value:    "",
+		Path:     "/api",
+		MaxAge:   -1,    // Немедленное удаление
+		HttpOnly: true,
+		Secure:   isSecureCookie(),
+		SameSite: http.SameSiteLaxMode,
+	})
 }
 
 // Register godoc
@@ -70,7 +92,7 @@ func (h *AuthHandler) Register(c *gin.Context) {
 		return
 	}
 
-	// Устанавливаем куку с токеном
+	// Устанавливаем безопасную куку с токеном
 	h.setAuthCookie(c, token)
 
 	errors.RespondWithSuccess(c, http.StatusCreated, gin.H{
@@ -99,7 +121,7 @@ func (h *AuthHandler) RegisterAdmin(c *gin.Context) {
 		Username string `json:"username" binding:"required"`
 		Email    string `json:"email" binding:"required,email"`
 		Password string `json:"password" binding:"required,min=6"`
-		Role     string `json:"role" binding:"required,oneof=admin operator analyst"`
+		Role     string `json:"role" binding:"required,oneof=admin operator analyst user"`
 	}
 
 	if err := c.ShouldBindJSON(&input); err != nil {
@@ -120,7 +142,7 @@ func (h *AuthHandler) RegisterAdmin(c *gin.Context) {
 		return
 	}
 
-	// Устанавливаем куку с токеном
+	// Устанавливаем безопасную куку с токеном
 	h.setAuthCookie(c, token)
 
 	errors.RespondWithSuccess(c, http.StatusCreated, gin.H{
@@ -160,7 +182,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		return
 	}
 
-	// Устанавливаем куку с токеном
+	// Устанавливаем безопасную куку с токеном
 	h.setAuthCookie(c, token)
 
 	errors.RespondWithSuccess(c, http.StatusOK, gin.H{
@@ -176,8 +198,8 @@ func (h *AuthHandler) Login(c *gin.Context) {
 // @Success 200 {object} map[string]interface{} "Выход выполнен"
 // @Router /api/logout [post]
 func (h *AuthHandler) Logout(c *gin.Context) {
-	// Удаляем куку (устанавливаем Max-Age = -1)
-	c.SetCookie("token", "", -1, "/api", "", false, true)
+	// Удаляем куку безопасным способом (с теми же флагами)
+	h.clearAuthCookie(c)
 	errors.RespondWithSuccess(c, http.StatusOK, gin.H{
 		"message": "Logged out successfully",
 	})

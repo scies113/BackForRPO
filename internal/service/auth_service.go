@@ -5,6 +5,7 @@ import (
 	"BackendFootball/internal/errors"
 	"BackendFootball/internal/middleware"
 	"BackendFootball/internal/model"
+	"strings"
 	"time"
 
 	"gorm.io/gorm"
@@ -44,6 +45,9 @@ func (s *AuthService) Register(user *model.User, password string) (string, error
 		return "", errors.ErrInternalError
 	}
 
+	// Запись в аудит — CREATE
+	s.logAudit(user.ID, user.Username, "CREATE", "User", user.ID)
+
 	return token, nil
 }
 
@@ -53,6 +57,9 @@ func (s *AuthService) RegisterWithRole(user *model.User, password, roleName stri
 	if err := user.SetPassword(password); err != nil {
 		return "", err
 	}
+
+	// Приводим название роли к нижнему регистру для надежности
+	roleName = strings.ToLower(roleName)
 
 	// Получение роли
 	var role model.Role
@@ -72,6 +79,9 @@ func (s *AuthService) RegisterWithRole(user *model.User, password, roleName stri
 	if err != nil {
 		return "", errors.ErrInternalError
 	}
+
+	// Запись в аудит — CREATE
+	s.logAudit(user.ID, user.Username, "CREATE", "User", user.ID)
 
 	return token, nil
 }

@@ -7,19 +7,19 @@ import (
 
 // Role - роль пользователя (Admin, Operator, Analyst, Fan)
 type Role struct {
-	ID   uint   `gorm:"primaryKey"`
-	Name string `gorm:"unique;not null"` // Например: "admin"
+	ID   uint   `gorm:"primaryKey" json:"id"`
+	Name string `gorm:"unique;not null" json:"name"` // Например: "admin"
 }
 
 // User - пользователь системы
 type User struct {
 	gorm.Model
-	Username     string `gorm:"unique;not null"`
-	Email        string `gorm:"unique;not null"`
-	PasswordHash string `gorm:"not null"`
-	RoleID       uint
-	Role         Role   `gorm:"foreignKey:RoleID"`
-	AuditLogs    []AuditLog // Связь с журналом
+	Username     string `gorm:"unique;not null" json:"username"`
+	Email        string `gorm:"unique;not null" json:"email"`
+	PasswordHash string `gorm:"not null" json:"-"`
+	RoleID       uint   `json:"role_id"`
+	Role         Role   `gorm:"foreignKey:RoleID" json:"role"`
+	AuditLogs    []AuditLog `json:"audit_logs,omitempty"` // Связь с журналом
 }
 
 // SetPassword - хеширование пароля (Требование безопасности ГОСТ)
