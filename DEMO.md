@@ -1,201 +1,239 @@
-# 🎬 Гайд по демонстрации GoBackendFootball
+# DEMO Guide - GoBackendFootball
 
-**Версия:** 3.0.0  
-**Дата:** 21 апреля 2026 г.
-
-Этот документ — пошаговая инструкция для **демонстрации бэкенда на защите курсовой работы**.
+**Version:** 3.0.0 | **Date:** 28 April 2026
 
 ---
 
-## 🚀 Подготовка (перед защитой)
+## Clean Database (Reset to Zero)
 
-### 1. Запустить PostgreSQL
-```bash
-docker-compose up -d
-```
-Или убедись, что PostgreSQL работает на порту 5433 (см. `.env`).
+To start with a fresh DB, run these commands:
 
-### 2. Запустить бэкенд
-```bash
-cd GoBackendFootball
+```powershell
+cd "C:\Users\bigge\OneDrive\Рабочий стол\GoBackendFootball"
+
+# Stop backend (Ctrl+C), then:
+docker-compose down -v
+docker-compose up -d db
+timeout 5
 go run cmd/api/main.go
 ```
 
-Ты увидишь в консоли:
+What happens:
+- `docker-compose down -v` removes PostgreSQL container and ALL data
+- `docker-compose up -d db` creates a new clean container
+- `go run cmd/api/main.go` automatically:
+  1. Creates all tables (AutoMigrate)
+  2. Creates roles: admin, operator, analyst, user
+  3. Creates default admin: `admin@demo.com` / `admin123`
+
+Console output:
 ```
-INFO  Сервер запущен              {"port": "8080"}
-INFO  Фронтенд доступен           {"url": "http://localhost:8080"}
-INFO  Swagger UI                   {"url": "http://localhost:8080/swagger/index.html"}
-```
-
-### 3. Открыть браузер
-- **Фронтенд:** http://localhost:8080
-- **Swagger:** http://localhost:8080/swagger/index.html
-
----
-
-## 📋 Сценарий демонстрации (15 минут)
-
-### Шаг 1. Лендинг (1 мин)
-1. Открой http://localhost:8080
-2. Покажи:
-   - Hero-секция с анимациями
-   - Карточки фич (CRUD, ИИ, роли, аудит)
-   - Кнопку "API Docs" → открывает Swagger
-
-**Что говорить:**
-> «Перед вами главная страница веб-приложения. Фронтенд реализован на HTML/CSS/JS и раздаётся прямо через Go-сервер — без отдельного сервера для фронтенда.»
-
----
-
-### Шаг 2. Регистрация (2 мин)
-1. Нажми **«Начать работу»** → страница логина
-2. Переключись на вкладку **«Регистрация»**
-3. Заполни:
-   - Имя: `admin_demo`
-   - Email: `admin@demo.com`
-   - Пароль: `123456`
-4. Нажми **«Зарегистрироваться»**
-
-**Что говорить:**
-> «Регистрация отправляет POST-запрос на /api/register. Пароль хешируется bcrypt. Сервер возвращает JWT-токен и устанавливает HttpOnly Cookie.»
-
----
-
-### Шаг 3. Dashboard (1 мин)
-1. После регистрации — автоматический редирект на Dashboard
-2. Покажи:
-   - Приветствие с именем
-   - Роль: «Пользователь» (user)
-   - Карточки навигации
-
-**Что говорить:**
-> «Dashboard загружает профиль через GET /api/me. Токен автоматически отправляется в Cookie. Роль определяет доступные действия.»
-
----
-
-### Шаг 4. Матчи — просмотр (2 мин)
-1. Нажми **«Матчи»**
-2. Если таблица пустая — скажи: *«Пока матчей нет, давайте создадим»*
-3. **Важно:** кнопка «Добавить матч» будет скрыта (роль user)!
-
-**Что говорить:**
-> «Обратите внимание — кнопка создания матча отсутствует. Пользователь с ролью user может только просматривать. Это ролевая модель в действии.»
-
----
-
-### Шаг 5. Переключение роли на admin (2 мин)
-
-Чтобы показать полный CRUD, нужен пользователь с ролью admin. Есть 2 варианта:
-
-**Вариант А.** Через Swagger:
-1. Открой http://localhost:8080/swagger/index.html
-2. Выполни `POST /api/login` с учёткой admin
-3. Или создай admin через БД
-
-**Вариант Б.** Через SQL (подготовить заранее):
-```sql
-UPDATE users SET role_id = (SELECT id FROM roles WHERE name = 'admin') WHERE email = 'admin@demo.com';
+[SEED] Default admin created: email=admin@demo.com password=admin123
+INFO  Server started              {"port": "8080"}
 ```
 
-Затем:
-1. Выйди из системы (кнопка «Выйти»)
-2. Войди заново (`admin@demo.com` / `123456`)
+---
 
-Теперь Dashboard покажет роль **«Администратор» 👑**
+## Step 0: Prepare Roles (BEFORE DEMO)
+
+> Do this once before the presentation. Takes 2 minutes.
+
+### 0.1 Start the system (clean DB)
+
+```powershell
+cd "C:\Users\bigge\OneDrive\Рабочий стол\GoBackendFootball"
+docker-compose down -v
+docker-compose up -d db
+timeout 5
+go run cmd/api/main.go
+```
+
+Admin is created automatically. No SQL commands needed!
+
+### 0.2 Get admin token via Swagger
+
+1. Open http://localhost:8080/swagger/index.html
+2. Find `POST /api/login` and click **Try it out**
+3. Paste:
+```json
+{
+  "email": "admin@demo.com",
+  "password": "admin123"
+}
+```
+4. Click **Execute** - copy the `"token"` from response
+
+### 0.3 Authorize in Swagger
+
+1. Click **Authorize** button (lock icon, top right)
+2. In BearerAuth field enter: `Bearer <your_token>`
+3. Click **Authorize**, then **Close**
+
+### 0.4 Create users with different roles
+
+Call `POST /api/admin/register` for each role:
+
+**Operator:**
+```json
+{
+  "username": "operator1",
+  "email": "operator@demo.com",
+  "password": "123456",
+  "role": "operator"
+}
+```
+
+**Analyst:**
+```json
+{
+  "username": "analyst1",
+  "email": "analyst@demo.com",
+  "password": "123456",
+  "role": "analyst"
+}
+```
+
+**User:**
+```json
+{
+  "username": "user1",
+  "email": "user@demo.com",
+  "password": "123456",
+  "role": "user"
+}
+```
+
+Each call should return **201 Created**.
+
+### Result: 4 users with different roles
+
+| Role | Email | Password | Permissions |
+|------|-------|----------|-------------|
+| admin | admin@demo.com | admin123 | Everything + audit |
+| operator | operator@demo.com | 123456 | CRUD matches + predictions |
+| analyst | analyst@demo.com | 123456 | Predictions only |
+| user | user@demo.com | 123456 | View only |
 
 ---
 
-### Шаг 6. CRUD матчей (3 мин)
-1. Зайди в **«Матчи»** — теперь видна кнопка **«Добавить матч»**
-2. **Создай** матч:
-   - Дома: `Arsenal`
-   - Гости: `Chelsea`
-   - Дата: завтрашний день
-   - Счёт: 0:0
-   - Статус: Запланирован
-3. **Создай** ещё один: `Real Madrid` vs `Barcelona`
-4. **Отредактируй** первый матч — измени счёт на 2:1
-5. **Удали** второй матч
+## Demo Scenario (15 minutes)
 
-**Что говорить:**
-> «Каждая операция отправляет соответствующий HTTP-запрос: POST, PUT, DELETE. Сервер валидирует данные — например, не допускает одинаковые команды. Каждое действие записывается в журнал аудита.»
+### Step 1. Landing Page (1 min)
+
+1. Open http://localhost:8080
+2. Show: hero section, feature cards, API Docs button
+
+> Frontend is built with vanilla HTML/CSS/JS and served directly by Go server - no separate Node.js needed.
 
 ---
 
-### Шаг 7. Прогнозы ИИ (2 мин)
-1. Зайди в **«Прогнозы»**
-2. Нажми **«Получить прогноз»** у матча
-3. Покажи анимацию прогресс-баров с вероятностями
+### Step 2. Register a regular user (2 min)
 
-**Что говорить:**
-> «Прогноз генерируется на бэкенде и кэшируется в базе данных. При повторном запросе возвращается кэш. Сейчас используется заглушка — в реальном приложении здесь будет ML-модель.»
+1. Click "Start" -> login page
+2. Switch to "Registration" tab
+3. Fill: Name `testuser`, Email `test@demo.com`, Password `123456`
+4. Click "Register"
 
----
-
-### Шаг 8. Журнал аудита (2 мин)
-1. Зайди в **«Аудит»**
-2. Покажи записи: LOGIN, CREATE, UPDATE, DELETE, PREDICT
-3. Используй фильтры:
-   - Отфильтруй по действию: `CREATE`
-   - Отфильтруй по дате
-   - Сбрось фильтры
-
-**Что говорить:**
-> «Журнал аудита фиксирует все действия пользователей в соответствии с ГОСТ Р ИСО/МЭК 27001. Поддерживается фильтрация и пагинация через query-параметры.»
+> Registration sends POST to /api/register. Password is hashed with bcrypt. Server sets JWT in HttpOnly Cookie.
 
 ---
 
-## 💡 Бонусные моменты для впечатления
+### Step 3. Dashboard (1 min)
 
-### Показать Swagger UI
-- Откройте http://localhost:8080/swagger/index.html
-- Покажите все эндпоинты с документацией
-- Выполните запрос прямо из Swagger
+1. After registration - auto redirect to Dashboard
+2. Show: greeting with name, role "User", navigation cards
 
-### Показать тесты
+> Dashboard loads profile via GET /api/me. Token is sent automatically in Cookie.
+
+---
+
+### Step 4. Matches - view without permissions (2 min)
+
+1. Click "Matches"
+2. "Add match" button is hidden - user role has no write permissions!
+
+> Notice the "Add match" button is missing. User role can only view. This is role-based access control in action.
+
+---
+
+### Step 5. Switch to admin (2 min)
+
+1. Click "Logout"
+2. Login with admin: `admin@demo.com` / `admin123`
+3. Dashboard shows role "Administrator"
+
+---
+
+### Step 6. CRUD Matches (3 min)
+
+1. Go to "Matches" - now "Add match" button is visible
+2. Create match: Arsenal vs Chelsea, tomorrow, 0:0, Scheduled
+3. Create another: Real Madrid vs Barcelona
+4. Edit first match - change score to 2:1
+5. Delete second match
+
+> Each operation sends HTTP request: POST, PUT, DELETE. Server validates data. Every action is logged in audit.
+
+---
+
+### Step 7. AI Predictions (2 min)
+
+1. Go to "Predictions"
+2. Click "Get prediction" for a match
+3. Show animated progress bars
+
+> Prediction is generated on backend and cached in DB. Currently uses a stub - in production this would be an ML model.
+
+---
+
+### Step 8. Audit Log (2 min)
+
+1. Go to "Audit"
+2. Show entries: LOGIN, CREATE, UPDATE, DELETE, PREDICT
+3. Use filters: by action CREATE, by date, reset
+
+> Audit log records all user actions. Supports filtering and pagination.
+
+---
+
+## Bonus Points
+
+### Swagger UI
+Open http://localhost:8080/swagger/index.html - show all endpoints.
+
+### Tests
 ```bash
 go test ./internal/... -v
 ```
-> «В проекте 22 теста — unit-тесты сервисов, middleware и HTTP-тесты хендлеров.»
+> 22 tests - unit tests for services, middleware, and HTTP handler tests.
 
-### Показать миграции
+### Migrations
 ```bash
 go run cmd/migrate/main.go -direction=up
 ```
-> «Миграции реализованы через golang-migrate. 5 пар файлов up/down для воспроизводимого развёртывания.»
+> Migrations via golang-migrate. 5 pairs of up/down files.
 
-### Показать логи
-- Запросы логируются в консоль через zap
-- Покажи логи во время демонстрации
+### Logs
+Requests are logged via zap - show logs during demo.
 
 ---
 
-## 🏗 Структура фронтенда
+## Frontend Structure
 
 ```
 frontend/
-├── index.html          # Лендинг
-├── login.html          # Вход / Регистрация
-├── dashboard.html      # Панель управления
-├── matches.html        # CRUD матчей
-├── predict.html        # Прогнозы ИИ
-├── audit.html          # Журнал аудита (admin)
-├── css/
-│   └── styles.css      # Тёмная тема, анимации
-└── js/
-    ├── api.js           # Обёртка fetch для API
-    ├── auth.js          # Авторизация + роли
-    └── app.js           # UI-утилиты (toast, дата)
+index.html          # Landing page
+login.html          # Login / Registration
+dashboard.html      # Dashboard
+matches.html        # CRUD matches
+predict.html        # AI Predictions
+audit.html          # Audit log (admin only)
+css/styles.css      # Dark theme, animations
+js/api.js           # Fetch wrapper for API
+js/auth.js          # Auth + roles
+js/app.js           # UI utilities (toast, dates)
 ```
-
-**Ключевые решения:**
-- Фронтенд раздаётся через `gin.Static()` — один сервер на порту 8080
-- API-запросы через `fetch` с `credentials: 'include'` (куки)
-- Ролевая модель на фронте: `Auth.canEdit()`, `Auth.canPredict()`
-- Адаптивный дизайн (мобильный + десктоп)
 
 ---
 
-**Версия документа:** 3.0.0  
-**Дата:** 21 апреля 2026 г.
+**Document version:** 3.0.0 | **Date:** 28 April 2026

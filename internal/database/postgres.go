@@ -2,10 +2,12 @@ package database
 
 import (
 	"fmt"
+	"log"
+	"os"
+
 	"BackendFootball/internal/model"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
-	"os"
 )
 
 var DB *gorm.DB
@@ -42,6 +44,9 @@ func Connect() error {
 		return err
 	}
 
+	// Автоматически создаём дефолтного admin, если его ещё нет
+	SeedDefaultAdmin()
+
 	return nil
 }
 
@@ -51,11 +56,57 @@ func createDefaultRoles() {
 		{Name: "admin"},
 		{Name: "operator"},
 		{Name: "analyst"},
-		{Name: "user"}, // user = fan (обычный пользователь)
+		{Name: "user"},
 	}
-
 	for _, role := range roles {
-		// Используем FirstOrCreate, чтобы не дублировать роли
 		DB.FirstOrCreate(&role, model.Role{Name: role.Name})
 	}
+}
+
+// SeedDefaultAdmin - создаёт дефолтного admin при старте, если ни одного нет.
+// Логин/пароль берётся из .env: ADMIN_EMAIL, ADMIN_PASSWORD.
+// Если не заданы — используются значения по умолчанию.
+func SeedDefaultAdmin() {
+	var adminRole model.Role
+	if err := DB.Where("name = ?", "admin").First(&adminRole).Error; err != nil {
+		return // Роли ещё нет — пропускаем
+	}
+
+	// Проверяем: есть ли хоть один admin-пользователь?
+	var count int64
+	DB.Model(&model.User{}).Where("role_id = ?", adminRole.ID).Count(&count)
+	if count > 0 {
+		return // Admin уже существует — ничего не делаем
+	}
+
+	// Берём учётные данные из .env, иначе дефолт
+	email := os.Getenv("ADMIN_EMAIL")
+	password := os.Getenv("ADMIN_PASSWORD")
+	username := os.Getenv("ADMIN_USERNAME")
+	if email == "" {
+		email = "admin@demo.com"
+	}
+	if password == "" {
+		password = "admin123"
+	}
+	if username == "" {
+		username = "admin"
+	}
+
+	admin := &model.User{
+		Username: username,
+		Email:    email,
+		RoleID:   adminRole.ID,
+	}
+	if err := admin.SetPassword(password); err != nil {
+		log.Printf("[SEED] Ошибка хеширования пароля admin: %v", err)
+		return
+	}
+
+	if err := DB.Create(admin).Error; err != nil {
+		log.Printf("[SEED] Ошибка создания дефолтного admin: %v", err)
+		return
+	}
+
+	log.Printf("[SEED] ✅ Дефолтный admin создан: email=%s password=%s", email, password)
 }

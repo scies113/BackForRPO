@@ -1,4 +1,4 @@
-basePath: /api
+basePath: /
 definitions:
   BackendFootball_internal_model.AuditLog:
     properties:

@@ -860,7 +860,7 @@ const docTemplate = `{
 var SwaggerInfo = &swag.Spec{
 	Version:          "2.0",
 	Host:             "localhost:8080",
-	BasePath:         "/api",
+	BasePath:         "/",
 	Schemes:          []string{},
 	Title:            "Football Stats API",
 	Description:      "REST API для веб-приложения \"Футбол - статистика матчей\"",

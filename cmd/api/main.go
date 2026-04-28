@@ -2,7 +2,7 @@
 // @version 2.0
 // @description REST API для веб-приложения "Футбол - статистика матчей"
 // @host localhost:8080
-// @BasePath /api
+// @BasePath /
 // @securityDefinitions.apikey BearerAuth
 // @in header
 // @name Authorization
