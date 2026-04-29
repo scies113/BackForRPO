@@ -1,0 +1,20 @@
+[
+    "HomeTeam_encoded",
+    "AwayTeam_encoded",
+    "Home_avg_GoalsScored",
+    "Home_avg_GoalsConceded",
+    "Home_avg_Shots",
+    "Home_avg_ShotsOnTarget",
+    "Home_avg_Corners",
+    "Home_avg_Fouls",
+    "Home_avg_YellowCards",
+    "Home_avg_RedCards",
+    "Away_avg_GoalsScored",
+    "Away_avg_GoalsConceded",
+    "Away_avg_Shots",
+    "Away_avg_ShotsOnTarget",
+    "Away_avg_Corners",
+    "Away_avg_Fouls",
+    "Away_avg_YellowCards",
+    "Away_avg_RedCards"
+]
