@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+*.pyo
+*.md
+.git
+.gitignore
+list_teams.py
