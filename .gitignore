@@ -100,3 +100,42 @@ logs/
 *.bak
 *.tmp
 *.cache
+
+# ──────────────────────────────────────────────
+#  Python (для ML-сервиса)
+# ──────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Виртуальные окружения
+venv/
+.env/
+.venv/
+env.bak/
+venv.bak/
+
+# Но мы ДОЛЖНЫ оставить модели и датасет (иначе Dockerfile ML сломается)
+!ml_model/*.csv
+!ml_model/*.pkl
+!ml_model/*.json
