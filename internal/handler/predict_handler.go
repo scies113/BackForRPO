@@ -53,9 +53,9 @@ func (h *PredictHandler) GetPrediction(c *gin.Context) {
 	errors.RespondWithSuccess(c, http.StatusOK, gin.H{
 		"match_id": prediction.MatchID,
 		"prediction": gin.H{
-			"home_win": prediction.HomeWinProb,
-			"draw":     prediction.DrawProb,
-			"away_win": prediction.AwayWinProb,
+			"home_win_prob": prediction.HomeWinProb,
+			"draw_prob":     prediction.DrawProb,
+			"away_win_prob": prediction.AwayWinProb,
 		},
 		"model_version": "v1.0",
 		"generated_at":  prediction.CreatedAt,

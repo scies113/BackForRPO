@@ -2,16 +2,27 @@ package service
 
 import (
 	"BackendFootball/internal/database"
+	"BackendFootball/internal/errors"
 	"BackendFootball/internal/model"
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
+	"os"
 	"time"
 )
 
-// mlPredictURL — адрес Python-сервера с ML-моделью
-const mlPredictURL = "http://localhost:8000/predict"
+// getMLPredictURL — возвращает URL ML-сервера из переменной окружения.
+// По умолчанию используется http://localhost:8000/predict (для локальной разработки).
+// В Docker-окружении устанавливается http://ml:8000/predict через docker-compose.
+func getMLPredictURL() string {
+	url := os.Getenv("ML_PREDICT_URL")
+	if url == "" {
+		return "http://localhost:8000/predict"
+	}
+	return url
+}
 
 type PredictService struct{}
 
@@ -32,44 +43,61 @@ type mlResponse struct {
 	AwayWinProb float32 `json:"away_win_prob"`
 }
 
+// mlErrorResponse — ответ об ошибке от Python ML-сервера
+type mlErrorResponse struct {
+	Detail string `json:"detail"`
+}
+
 // fetchMLPrediction — отправляет запрос к Python ML-серверу
 // и возвращает вероятности исходов матча.
-// В случае ошибки возвращает nil — вызывающий код использует запасные значения.
-func fetchMLPrediction(homeTeam, awayTeam string) *mlResponse {
+// Возвращает ошибку, если ML-сервер недоступен или вернул ошибку.
+func fetchMLPrediction(homeTeam, awayTeam string) (*mlResponse, error) {
 	reqBody, err := json.Marshal(mlRequest{
 		HomeTeam: homeTeam,
 		AwayTeam: awayTeam,
 	})
 	if err != nil {
-		fmt.Printf("[ML] Ошибка формирования запроса: %v\n", err)
-		return nil
+		return nil, fmt.Errorf("ошибка формирования запроса к ML-серверу: %w", err)
 	}
 
-	client := &http.Client{Timeout: 5 * time.Second}
-	resp, err := client.Post(mlPredictURL, "application/json", bytes.NewBuffer(reqBody))
+	client := &http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Post(getMLPredictURL(), "application/json", bytes.NewBuffer(reqBody))
 	if err != nil {
-		fmt.Printf("[ML] ML-сервер недоступен: %v\n", err)
-		return nil
+		return nil, fmt.Errorf("ML-сервер недоступен: %w", err)
 	}
 	defer resp.Body.Close()
 
+	body, _ := io.ReadAll(resp.Body)
+
 	if resp.StatusCode != http.StatusOK {
-		fmt.Printf("[ML] ML-сервер вернул статус %d\n", resp.StatusCode)
-		return nil
+		// Пытаемся извлечь сообщение об ошибке от ML-сервера
+		var mlErr mlErrorResponse
+		if json.Unmarshal(body, &mlErr) == nil && mlErr.Detail != "" {
+			return nil, errors.NewAppError(
+				errors.PREDICTION_ERROR,
+				fmt.Sprintf("Ошибка ML-модели: %s", mlErr.Detail),
+				resp.StatusCode,
+			)
+		}
+		return nil, errors.NewAppError(
+			errors.PREDICTION_ERROR,
+			fmt.Sprintf("ML-сервер вернул ошибку (HTTP %d)", resp.StatusCode),
+			http.StatusBadGateway,
+		)
 	}
 
 	var mlResp mlResponse
-	if err := json.NewDecoder(resp.Body).Decode(&mlResp); err != nil {
-		fmt.Printf("[ML] Ошибка декодирования ответа: %v\n", err)
-		return nil
+	if err := json.Unmarshal(body, &mlResp); err != nil {
+		return nil, fmt.Errorf("ошибка декодирования ответа ML-сервера: %w", err)
 	}
 
-	return &mlResp
+	return &mlResp, nil
 }
 
 // GetPrediction — получение прогноза для матча.
 // Если прогноз уже есть в БД — возвращает его.
 // Если нет — запрашивает у Python ML-сервера и сохраняет в БД.
+// При недоступности ML-сервера возвращает ошибку (без fallback-значений).
 func (s *PredictService) GetPrediction(matchID uint, userID uint, userName string) (*model.Prediction, error) {
 	var prediction model.Prediction
 
@@ -85,28 +113,23 @@ func (s *PredictService) GetPrediction(matchID uint, userID uint, userName strin
 	// Получаем матч для анализа
 	var match model.Match
 	if err := database.DB.First(&match, matchID).Error; err != nil {
-		return nil, err
+		return nil, errors.ErrMatchNotFound
 	}
 
 	// Запрашиваем прогноз у Python ML-сервера (XGBoost)
-	var homeWin, draw, awayWin float32
-
-	mlResult := fetchMLPrediction(match.HomeTeam, match.AwayTeam)
-	if mlResult != nil {
-		// ML-сервер ответил — используем реальные вероятности
-		homeWin = mlResult.HomeWinProb * 100 // Переводим из долей в проценты
-		draw = mlResult.DrawProb * 100
-		awayWin = mlResult.AwayWinProb * 100
-		fmt.Printf("[ML] Прогноз получен: %s vs %s → H:%.1f%% D:%.1f%% A:%.1f%%\n",
-			match.HomeTeam, match.AwayTeam, homeWin, draw, awayWin)
-	} else {
-		// ML-сервер недоступен — используем запасные значения
-		homeWin = 45.2
-		draw = 30.1
-		awayWin = 24.7
-		fmt.Printf("[ML] Используются запасные значения для %s vs %s\n",
-			match.HomeTeam, match.AwayTeam)
+	mlResult, err := fetchMLPrediction(match.HomeTeam, match.AwayTeam)
+	if err != nil {
+		fmt.Printf("[ML] Ошибка получения прогноза для %s vs %s: %v\n",
+			match.HomeTeam, match.AwayTeam, err)
+		return nil, err
 	}
+
+	// ML-сервер ответил — используем реальные вероятности
+	homeWin := mlResult.HomeWinProb * 100 // Переводим из долей в проценты
+	draw := mlResult.DrawProb * 100
+	awayWin := mlResult.AwayWinProb * 100
+	fmt.Printf("[ML] Прогноз получен: %s vs %s → H:%.1f%% D:%.1f%% A:%.1f%%\n",
+		match.HomeTeam, match.AwayTeam, homeWin, draw, awayWin)
 
 	prediction = model.Prediction{
 		MatchID:     matchID,
@@ -133,4 +156,3 @@ func (s *PredictService) GetPrediction(matchID uint, userID uint, userName strin
 
 	return &prediction, nil
 }
-
