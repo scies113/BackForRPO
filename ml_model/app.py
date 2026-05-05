@@ -51,6 +51,20 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="Football Prediction API", lifespan=lifespan)
 
 
+@app.get("/health")
+def health():
+    """Проверка работоспособности сервиса."""
+    return {"status": "ok", "model_loaded": model_wrapper is not None}
+
+
+@app.get("/teams")
+def list_teams():
+    """Возвращает список всех команд, известных модели."""
+    if team_encoder is None:
+        return {"teams": []}
+    return {"teams": sorted(team_encoder.classes_.tolist())}
+
+
 class MatchRequest(BaseModel):
     """Входные данные для предсказания: названия домашней и гостевой команд."""
     home_team: str
