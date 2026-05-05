@@ -1045,15 +1045,27 @@ GoBackendFootball/
 │   ├── 000004_create_audit_logs.up/down.sql
 │   └── 000005_create_predictions.up/down.sql
 │
+├── ml_model/                    # Модуль машинного обучения (Python FastAPI)
+│   ├── app.py                   # FastAPI сервер
+│   ├── model.py                 # Обертка XGBoost
+│   ├── train.py                 # Скрипт обучения
+│   ├── dataset.py               # Обработка признаков
+│   ├── epl_final.csv            # Исторический датасет АПЛ
+│   ├── Dockerfile               # Docker-образ ML-сервиса
+│   ├── requirements.txt         # Зависимости Python
+│   └── TEAMS.md                 # Список поддерживаемых команд
+│
 ├── docs/                        # Swagger (автогенерация)
 │   ├── docs.go / swagger.json / swagger.yaml
 │
 ├── .env                         # Переменные окружения
-├── docker-compose.yml           # Docker-конфигурация
-├── Dockerfile                   # Образ приложения
+├── docker-compose.yml           # Docker-конфигурация (Go + DB + ML)
+├── Dockerfile                   # Образ Go-бэкенда
 ├── README.md                    # Документация
 ├── ARCHITECTURE.md              # Этот файл
-├── GUIDE.md                     # Инструкция по запуску
+├── GUIDE.md                     # Инструкция по запуску API
+├── STARTUP.md                   # Инструкция для новичков
+├── DEMO.md                      # Сценарий демонстрации
 ├── PROGRESS.md                  # Прогресс разработки
 ├── go.mod                       # Зависимости Go
 └── go.sum                       # Версии зависимостей
@@ -1063,11 +1075,13 @@ GoBackendFootball/
 
 ## 📚 Дополнительные документы
 
-- **README.md** — общая информация, прогресс, API
-- **GUIDE.md** — подробная инструкция по запуску и использованию
+- **README.md** — общая информация, прогресс, Быстрый старт
+- **GUIDE.md** — подробная инструкция по API и тестированию
+- **STARTUP.md** — пошаговый запуск для абсолютных новичков
+- **DEMO.md** — сценарий презентации (как показывать проект)
 - **PROGRESS.md** — текущий прогресс разработки
 
 ---
 
-**Версия документа:** 3.0.0  
-**Дата:** 20 апреля 2026 г.
+**Версия документа:** 4.0.0  
+**Дата:** 5 мая 2026 г.

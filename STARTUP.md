@@ -10,9 +10,10 @@
 
 | Программа | Проверить командой | Скачать |
 |-----------|-------------------|---------|
-| **Go** | `go version` | https://go.dev/dl/ |
 | **Docker Desktop** | `docker --version` | https://www.docker.com/products/docker-desktop/ |
 | **Git** | `git --version` | https://git-scm.com/downloads |
+
+> *Go (Golang) и Python устанавливать не обязательно — всё работает внутри Docker!*
 
 ---
 
@@ -41,61 +42,43 @@ docker --version
 
 Должно вывести что-то типа: `Docker version 27.x.x`
 
-### Шаг 3. Удали старую базу данных (полная очистка)
+### Шаг 3. Удали старую базу данных и контейнеры (полная очистка)
 
 ```powershell
 docker-compose down -v
 ```
 
-**Что делает:** останавливает контейнер PostgreSQL и **удаляет все данные** (флаг `-v` удаляет volumes — это хранилище БД).
+**Что делает:** останавливает все контейнеры (БД, ML-модель, Go-бэкенд) и **удаляет все данные** (флаг `-v` удаляет хранилище БД).
 
-### Шаг 4. Запусти чистую базу данных
+### Шаг 4. Запусти всю систему разом
 
 ```powershell
-docker-compose up -d db
+docker-compose up --build -d
 ```
 
-**Что делает:** скачивает (если нужно) и запускает PostgreSQL 15 в Docker-контейнере.
+**Что делает:** 
+- Скачивает PostgreSQL
+- Собирает образ для ML-модели (Python + XGBoost)
+- Собирает образ для Go-бэкенда
+- Запускает всё в фоновом режиме (`-d`) в правильном порядке.
 
-Подожди 5 секунд и проверь:
+Подожди 10-15 секунд и проверь статус:
 
 ```powershell
 docker ps
 ```
 
-Ты должен увидеть контейнер со статусом `Up ... (healthy)`:
+Ты должен увидеть 3 контейнера:
+1. `postgres:15` (база данных)
+2. `football-ml` (машинное обучение)
+3. `football-app` (Go-бэкенд)
 
-```
-CONTAINER ID   IMAGE         STATUS                    PORTS
-xxxxxxxxxxxx   postgres:15   Up 10 seconds (healthy)   0.0.0.0:5433->5432/tcp
-```
-
-### Шаг 5. Запусти бэкенд
-
-```powershell
-go run cmd/api/main.go
-```
-
-**Что делает:** компилирует и запускает Go-сервер. Он автоматически:
-- Подключится к PostgreSQL
-- Создаст все таблицы (AutoMigrate)
-- Создаст роли: admin, operator, analyst, user
-- Запустит HTTP-сервер на порту 8080
-
-Ты увидишь:
-
-```
-INFO  Сервер запущен       {"port": "8080"}
-INFO  Фронтенд доступен   {"url": "http://localhost:8080"}
-INFO  Swagger UI           {"url": "http://localhost:8080/swagger/index.html"}
-```
-
-### Шаг 6. Открой в браузере
+### Шаг 5. Открой в браузере
 
 - **Фронтенд:** http://localhost:8080
 - **Swagger:** http://localhost:8080/swagger/index.html
 
-**Готово! 🎉** БД чистая, можно демонстрировать.
+**Готово! 🎉** БД чистая, админ создается автоматически (`admin@demo.com` / `admin123`), можно демонстрировать.
 
 ---
 
@@ -107,26 +90,20 @@ INFO  Swagger UI           {"url": "http://localhost:8080/swagger/index.html"}
 # 1. Перейди в папку проекта
 cd "C:\Users\bigge\OneDrive\Рабочий стол\GoBackendFootball"
 
-# 2. Запусти PostgreSQL (если не запущен)
-docker-compose up -d db
-
-# 3. Запусти бэкенд
-go run cmd/api/main.go
+# 2. Запусти все сервисы
+docker-compose up -d
 ```
 
 ---
 
 ## 🛑 Как остановить
 
-### Остановить бэкенд
-Нажми **Ctrl+C** в терминале где работает `go run`.
-
-### Остановить PostgreSQL
+### Остановить ВСЁ (но сохранить базу данных)
 ```powershell
 docker-compose down
 ```
 
-### Остановить ВСЁ и удалить данные
+### Остановить ВСЁ и удалить данные (сброс)
 ```powershell
 docker-compose down -v
 ```
@@ -143,32 +120,15 @@ docker-compose down -v
 Открой: http://localhost:8080/swagger/index.html  
 Должен увидеть Swagger UI с документацией.
 
-### Проверка 3: Тесты проходят
-```powershell
-go test ./internal/... -v
-```
-Должно быть: `22 тестов, все PASS`.
-
-### Проверка 4: PostgreSQL работает
+### Проверка 3: Все контейнеры "здоровы"
 ```powershell
 docker ps
 ```
-Должен видеть контейнер `postgres:15` со статусом `healthy`.
+Должен видеть контейнеры со статусом `healthy`.
 
 ---
 
 ## 🆘 Частые проблемы
-
-### ❌ «Ошибка подключения к базе данных»
-
-**Причина:** PostgreSQL не запущен.
-
-**Решение:**
-```powershell
-docker-compose up -d db
-# Подожди 5 секунд
-go run cmd/api/main.go
-```
 
 ### ❌ «failed to connect to docker API»
 
@@ -176,30 +136,13 @@ go run cmd/api/main.go
 
 **Решение:** Открой Docker Desktop из меню Пуск, подожди 1-2 мин.
 
-### ❌ «port 5433 already in use»
+### ❌ «port 5433 / 8080 already in use»
 
-**Причина:** Старый контейнер PostgreSQL висит.
+**Причина:** Старые контейнеры или локальные приложения ещё работают.
 
 **Решение:**
 ```powershell
 docker-compose down
-docker-compose up -d db
-```
-
-### ❌ «port 8080 already in use»
-
-**Причина:** Старый бэкенд ещё работает.
-
-**Решение:** Закрой предыдущий терминал или нажми Ctrl+C.
-
-### ❌ Запускаю из cmd/api/ — переменные пустые
-
-**Причина:** `.env` файл ищется в текущей папке.
-
-**Решение:** Запускай **ТОЛЬКО из корня проекта:**
-```powershell
-cd "C:\Users\bigge\OneDrive\Рабочий стол\GoBackendFootball"
-go run cmd/api/main.go
 ```
 
 ---
@@ -210,24 +153,21 @@ go run cmd/api/main.go
 ```powershell
 cd "C:\Users\bigge\OneDrive\Рабочий стол\GoBackendFootball"
 docker-compose down -v
-docker-compose up -d db
-timeout 5
-go run cmd/api/main.go
+docker-compose up --build -d
 ```
 
 ### Быстрый запуск:
 ```powershell
 cd "C:\Users\bigge\OneDrive\Рабочий стол\GoBackendFootball"
-docker-compose up -d db
-go run cmd/api/main.go
+docker-compose up -d
 ```
 
-### Полная остановка:
+### Полная остановка (с удалением данных):
 ```powershell
 docker-compose down -v
 ```
 
 ---
 
-**Версия документа:** 3.0.0  
-**Дата:** 21 апреля 2026 г.
+**Версия документа:** 4.0.0  
+**Дата:** 5 мая 2026 г.

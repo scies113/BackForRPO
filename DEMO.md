@@ -11,20 +11,13 @@
 ```powershell
 cd "C:\Users\bigge\OneDrive\Рабочий стол\GoBackendFootball"
 
-# Остановите бэкенд (Ctrl+C), затем:
+# Остановите старые контейнеры и удалите базу:
 docker-compose down -v
-docker-compose up -d db
-timeout 5
 
-# Терминал 1 — ML-модель
-cd ml_model
-pip install -r requirements.txt   # только при первом запуске
-python train.py                   # только при первом запуске
-python app.py                     # оставьте работать
+# Запустите весь стек (База, ML-модель, Go-бэкенд):
+docker-compose up --build -d
 
-# Терминал 2 — Go-бэкенд (из корня проекта)
-cd ..
-go run cmd/api/main.go
+# Подождите 10-15 секунд, пока все сервисы не станут Healthy
 ```
 
 Что произойдет:
@@ -50,26 +43,12 @@ INFO  Server started              {"port": "8080"}
 ### 0.1 Запуск системы (чистая БД)
 
 ```powershell
-# Терминал 1 — База данных
-cd "C:\Users\user\Desktop\BackForRPO"
+cd "C:\Users\bigge\OneDrive\Рабочий стол\GoBackendFootball"
 docker-compose down -v
-docker-compose up -d db
-timeout 5
+docker-compose up --build -d
 ```
+> Админ создается автоматически. База поднимается и применяется структура. ML-сервис и Go-бэкенд запускаются сами в правильном порядке.
 
-```powershell
-# Терминал 2 — ML-модель (оставьте работать)
-cd "C:\Users\user\Desktop\BackForRPO\ml_model"
-pip install -r requirements.txt   # только при первом запуске
-python train.py                   # только при первом запуске
-python app.py
-```
-
-```powershell
-# Терминал 3 — Go-бэкенд (из корня проекта)
-cd "C:\Users\user\Desktop\BackForRPO"
-go run cmd/api/main.go
-```
 
 Админ создается автоматически. SQL-команды не нужны!
 
@@ -201,12 +180,12 @@ go run cmd/api/main.go
 
 ### Шаг 7. AI Прогнозы (3 мин)
 
-1. Убедитесь, что ML-сервер запущен (`python app.py` в отдельном терминале).
+1. Убедитесь, что все контейнеры работают (`docker ps`).
 2. Перейдите в "Predictions".
 3. Нажмите "Get prediction" для матча.
 4. Покажите анимированные прогресс-бары с реальными процентами.
 
-> Прогноз генерируется моделью XGBoost (градиентный бустинг), обученной на ~9400 матчах АПЛ. Go-бэкенд отправляет HTTP-запрос к Python-серверу (FastAPI, порт 8000), получает вероятности и сохраняет в PostgreSQL. Повторный запрос прогноза возвращает кэшированный результат из БД.
+> Прогноз генерируется моделью XGBoost (градиентный бустинг), обученной на ~9400 матчах АПЛ. Go-бэкенд отправляет HTTP-запрос к Python-сервису (внутри Docker-сети), получает вероятности и сохраняет в PostgreSQL. Повторный запрос прогноза возвращает кэшированный результат из БД.
 >
 > Если ML-сервер не запущен, бэкенд автоматически использует запасные значения — приложение не падает.
 

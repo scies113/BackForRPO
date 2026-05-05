@@ -1541,40 +1541,34 @@ GoBackendFootball/
 
 ## 🚀 Быстрый старт
 
-### Вариант 1: Запуск через Docker Compose (рекомендуется)
+### Вариант 1: Запуск всего стека через Docker Compose (Рекомендуется)
+
+Запускает PostgreSQL, Python ML-сервис (FastAPI) и Go-бэкенд в единой сети:
 
 ```bash
-# Запуск всех сервисов (БД + бэкенд)
-docker-compose up --build
+# Сборка и запуск всех сервисов в фоне
+docker-compose up --build -d
 
 # Сервер будет доступен на http://localhost:8080
+# ML-сервис работает внутри Docker на порту 8000
 ```
 
-### Вариант 2: Локальный запуск
+### Вариант 2: Локальная разработка
 
 1. **Запустите базу данных:**
 ```bash
 docker-compose up -d db
 ```
 
-2. **Настройте переменные окружения:**
-
-Файл `.env` в корне проекта:
-```env
-DB_HOST=localhost
-DB_USER=postgres
-DB_PASSWORD=1234567890
-DB_NAME=football_stats
-DB_PORT=5433
-PORT=8080
-JWT_SECRET=your-secret-key-change-in-production
+2. **Запустите ML-модель:**
+```bash
+cd ml_model
+pip install -r requirements.txt
+python app.py
 ```
 
-3. **Запустите сервер:**
+3. **Запустите бэкенд (из корня):**
 ```bash
-set DB_HOST=localhost
-set DB_PORT=5433
-set DB_PASSWORD=1234567890
 go run cmd/api/main.go
 ```
 
@@ -1582,13 +1576,15 @@ go run cmd/api/main.go
 
 ## 📞 Контакты
 
-Если возникли вопросы по запуску — см. раздел «Быстрый старт» выше или файл `GUIDE.md`.
+Если возникли вопросы по запуску — см. файл `STARTUP.md` (для новичков) или `DEMO.md` (сценарий презентации).
 
 ---
 
 ## 📚 Дополнительные документы
 
-- **GUIDE.md** — подробная инструкция по запуску и тестированию
+- **STARTUP.md** — подробная пошаговая инструкция для чайников
+- **DEMO.md** — сценарий для защиты/презентации проекта
+- **GUIDE.md** — подробная инструкция по запуску и тестированию API
 - **ARCHITECTURE.md** — архитектура и принцип работы бэкенда
 - **PROGRESS.md** — прогресс разработки (все задачи выполнены)
 - **Swagger UI** — `http://localhost:8080/swagger/index.html`
