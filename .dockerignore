@@ -1,0 +1,87 @@
+# ============================================================================
+#  GoBackendFootball — .dockerignore
+#  Ускоряет сборку Docker-образа, исключая ненужные файлы из контекста.
+# ============================================================================
+
+# ── Скомпилированные бинарники (>50 МБ каждый!) ──
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+api.exe
+migrate.exe
+bin/
+main
+
+# ── Git ──
+.git
+.gitignore
+
+# ── IDE / Редакторы ──
+.vscode/
+.idea/
+*.iml
+*.swp
+*.swo
+*~
+.gemini/
+
+# ── Конфигурация и секреты ──
+.env
+.env.local
+.env.production
+cookies.txt
+*.pem
+*.key
+*.cookie
+*.cookies
+
+# ── Зависимости Go (скачиваются в контейнере) ──
+vendor/
+
+# ── Тесты и покрытие ──
+*.test
+*.out
+coverage.html
+coverage.txt
+*.prof
+tests/
+
+# ── Документация (не нужна в контейнере) ──
+*.md
+ARCHITECTURE.md
+DEMO.md
+GUIDE.md
+PROGRESS.md
+README.md
+STARTUP.md
+
+# ── ОС ──
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+*.orig
+
+# ── Docker ──
+docker-compose.yml
+docker-compose.override.yml
+Dockerfile
+
+# ── Логи ──
+*.log
+logs/
+
+# ── ML-модель (у неё свой Dockerfile) ──
+ml_model/
+
+# ── Прочее ──
+*.bak
+*.tmp
+*.cache
+*.txt
