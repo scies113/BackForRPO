@@ -1,6 +1,6 @@
 # Руководство по ДЕМО — GoBackendFootball
 
-**Версия:** 3.0.0 | **Дата:** 28 апреля 2026 г.
+**Версия:** 4.0.0 | **Дата:** 30 апреля 2026 г.
 
 ---
 
@@ -13,8 +13,17 @@ cd "C:\Users\bigge\OneDrive\Рабочий стол\GoBackendFootball"
 
 # Остановите бэкенд (Ctrl+C), затем:
 docker-compose down -v
-docker-compose up
+docker-compose up -d db
 timeout 5
+
+# Терминал 1 — ML-модель
+cd ml_model
+pip install -r requirements.txt   # только при первом запуске
+python train.py                   # только при первом запуске
+python app.py                     # оставьте работать
+
+# Терминал 2 — Go-бэкенд (из корня проекта)
+cd ..
 go run cmd/api/main.go
 ```
 
@@ -41,10 +50,24 @@ INFO  Server started              {"port": "8080"}
 ### 0.1 Запуск системы (чистая БД)
 
 ```powershell
-cd "C:\Users\bigge\OneDrive\Рабочий стол\GoBackendFootball"
+# Терминал 1 — База данных
+cd "C:\Users\user\Desktop\BackForRPO"
 docker-compose down -v
 docker-compose up -d db
 timeout 5
+```
+
+```powershell
+# Терминал 2 — ML-модель (оставьте работать)
+cd "C:\Users\user\Desktop\BackForRPO\ml_model"
+pip install -r requirements.txt   # только при первом запуске
+python train.py                   # только при первом запуске
+python app.py
+```
+
+```powershell
+# Терминал 3 — Go-бэкенд (из корня проекта)
+cd "C:\Users\user\Desktop\BackForRPO"
 go run cmd/api/main.go
 ```
 
@@ -176,13 +199,16 @@ go run cmd/api/main.go
 
 ---
 
-### Шаг 7. AI Прогнозы (2 мин)
+### Шаг 7. AI Прогнозы (3 мин)
 
-1. Перейдите в "Predictions".
-2. Нажмите "Get prediction" для матча.
-3. Покажите анимированные прогресс-бары.
+1. Убедитесь, что ML-сервер запущен (`python app.py` в отдельном терминале).
+2. Перейдите в "Predictions".
+3. Нажмите "Get prediction" для матча.
+4. Покажите анимированные прогресс-бары с реальными процентами.
 
-> Прогноз генерируется на бэкенде и кэшируется в БД. Сейчас используется заглушка — в продакшене здесь была бы ML-модель.
+> Прогноз генерируется моделью XGBoost (градиентный бустинг), обученной на ~9400 матчах АПЛ. Go-бэкенд отправляет HTTP-запрос к Python-серверу (FastAPI, порт 8000), получает вероятности и сохраняет в PostgreSQL. Повторный запрос прогноза возвращает кэшированный результат из БД.
+>
+> Если ML-сервер не запущен, бэкенд автоматически использует запасные значения — приложение не падает.
 
 ---
 
@@ -236,4 +262,22 @@ js/app.js           # Утилиты UI (уведомления, даты)
 
 ---
 
-**Версия документа:** 3.0.0 | **Дата:** 28 апреля 2026 г.
+## Структура ML-модели
+
+```
+ml_model/
+epl_final.csv           # Датасет: ~9400 матчей АПЛ (2000–2024)
+dataset.py              # Предобработка: скользящие средние за 5 матчей
+model.py                # Обёртка XGBClassifier (градиентный бустинг)
+train.py                # Обучение модели и вывод метрик
+app.py                  # FastAPI-сервер (порт 8000)
+requirements.txt        # Зависимости Python
+xgboost_model.pkl       # Обученная модель (создаётся после train.py)
+team_encoder.pkl        # Кодировщик названий команд
+latest_team_stats.pkl   # Последние 5 матчей каждой команды
+feature_cols.json       # Порядок признаков для модели
+```
+
+---
+
+**Версия документа:** 4.0.0 | **Дата:** 30 апреля 2026 г.
