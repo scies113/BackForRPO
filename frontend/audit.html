@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Журнал аудита — FootballStats</title>
-    <meta name="description" content="Журнал аудита действий пользователей в системе FootballStats.">
+    <title>Журнал аудита — FootballStatistics</title>
+    <meta name="description" content="Детальный журнал аудита действий пользователей в системе FootballStatistics.">
     <link rel="stylesheet" href="/static/css/styles.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -26,8 +26,10 @@
 
     <main>
         <div class="container">
-            <div class="page-header">
-                <h1><i class="fas fa-clipboard-list"></i> Журнал аудита</h1>
+            <div class="banner-header">
+                <img src="/static/foto/audit1.jpg" alt="Журнал аудита" class="photo-landscape">
+                <div class="photo-overlay"></div>
+                <h1 style="color:#fff"><i class="fas fa-clipboard-list"></i> Журнал аудита</h1>
             </div>
             <div class="filters">
                 <select id="actionFilter">
@@ -50,7 +52,23 @@
         </div>
     </main>
 
-    <footer class="footer"><div class="container"><p>&copy; 2026 FootballStats</p></div></footer>
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-brand">
+                    <a href="/" class="footer-logo"><i class="fas fa-futbol"></i> FootballStatistics</a>
+                    <p class="footer-tagline">Платформа аналитики и AI-прогнозов</p>
+                </div>
+                <div class="footer-links">
+                    <a href="/matches">Матчи</a>
+                    <a href="/predict">Прогнозы</a>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2026 FootballStatistics.(ЭФБО-12-24).</p>
+            </div>
+        </div>
+    </footer>
 
     <script src="/static/js/api.js"></script>
     <script src="/static/js/app.js"></script>

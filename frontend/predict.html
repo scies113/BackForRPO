@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Прогнозы ИИ — FootballStats</title>
-    <meta name="description" content="AI-прогнозы для футбольных матчей с вероятностями исходов.">
+    <title>Прогнозы ИИ — FootballStatistics</title>
+    <meta name="description" content="AI-прогнозы исходов футбольных матчей — точные вероятности на основе ансамблевых моделей машинного обучения.">
     <link rel="stylesheet" href="/static/css/styles.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -26,20 +26,55 @@
 
     <main>
         <div class="container">
-            <div class="page-header">
-                <h1><i class="fas fa-robot"></i> Прогнозы ИИ</h1>
+            <div class="banner-header">
+                <img src="/static/foto/predict1.jpg" alt="AI-прогнозы матчей" class="photo-landscape">
+                <div class="photo-overlay"></div>
+                <h1 style="color:#fff"><i class="fas fa-robot"></i> Прогнозы ИИ</h1>
             </div>
-            <p style="color:var(--text2);margin-bottom:24px">Выберите матч и нажмите «Получить прогноз» — система сгенерирует вероятности исхода.</p>
+            <p style="color:var(--text2);margin-bottom:24px">Выберите матч и нажмите «Получить прогноз» — система сгенерирует вероятности исхода на основе ML-модели.</p>
             <div id="content"><div class="loader"></div></div>
         </div>
     </main>
 
-    <footer class="footer"><div class="container"><p>&copy; 2026 FootballStats</p></div></footer>
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-brand">
+                    <a href="/" class="footer-logo"><i class="fas fa-futbol"></i> FootballStatistics</a>
+                    <p class="footer-tagline">Платформа аналитики и AI-прогнозов</p>
+                </div>
+                <div class="footer-links">
+                    <a href="/matches">Матчи</a>
+                    <a href="/predict">Прогнозы</a>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2026 FootballStatistics.(ЭФБО-12-24).</p>
+            </div>
+        </div>
+    </footer>
 
     <script src="/static/js/api.js"></script>
     <script src="/static/js/app.js"></script>
     <script src="/static/js/auth.js"></script>
     <script>
+        // Generate team abbreviation (first 3 chars uppercase)
+        function teamAbbr(name) {
+            if (!name) return '???';
+            // Handle multi-word names
+            const special = {'Man City':'MCI','Man United':'MUN','Crystal Palace':'CRY','West Ham':'WHU','West Brom':'WBA','Sheffield United':'SHU','Aston Villa':'AVL',"Nott'm Forest":'NFO'};
+            if (special[name]) return special[name];
+            return name.substring(0, 3).toUpperCase();
+        }
+
+        // Generate team color from name (deterministic hash)
+        function teamColor(name) {
+            const colors = ['#EF0107','#670E36','#0057B8','#003399','#FFFFFF','#DA291C','#E30613','#D71920','#0057B8','#6C1D45','#0070B5','#ED1A3B','#034694','#EB7400','#1B458F','#FFFFFF','#003399','#000000','#F5A623','#0000FF','#FFCD00','#003090','#C8102E','#6CABDD','#DA291C','#EB1C22','#241F20','#E53233','#FFF200','#1B458F','#DA291C','#EE2737','#D71920','#E03A3E','#EB172B','#E78B1E','#132257','#FBEE23','#122F67','#7A263A','#A7A5A6','#FDB913'];
+            let hash = 0;
+            for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+            return colors[Math.abs(hash) % colors.length];
+        }
+
         async function load() {
             const ok = await Auth.requireAuth();
             if (!ok) return;
@@ -55,29 +90,116 @@
                 document.getElementById('content').innerHTML = `<div class="no-data"><i class="fas fa-exclamation-triangle"></i><p>${err.message}</p></div>`;
             }
         }
+
         function renderMatches(matches) {
             const canGen = Auth.canPredict();
             let html = '';
             matches.forEach(m => {
                 const id = m.ID || m.id;
                 const p = m.prediction;
-                html += `<div class="predict-card" id="match-${id}"><div class="predict-teams"><span>${m.home_team}</span><span class="predict-vs">VS</span><span>${m.away_team}</span></div><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><span style="color:var(--text3);font-size:.85rem">${formatDateShort(m.match_date||m.date)} • ${m.home_score}:${m.away_score}</span>${!p&&canGen?`<button class="btn btn-secondary btn-sm" id="btn-${id}" onclick="predict(${id})"><i class="fas fa-brain"></i> Получить прогноз</button>`:(!p&&!canGen?'<span style="font-size:.8rem;color:var(--text3)"><i class="fas fa-clock"></i> Прогноз ожидается</span>':'')}</div><div id="result-${id}">${p?renderProbs(p):''}</div></div>`;
+                const homeAbbr = teamAbbr(m.home_team);
+                const awayAbbr = teamAbbr(m.away_team);
+                const homeColor = teamColor(m.home_team);
+                const awayColor = teamColor(m.away_team);
+                const dateStr = formatDateShort(m.match_date || m.date);
+
+                html += `<div class="predict-card" id="match-${id}">
+                    <div class="predict-card-header">
+                        <span class="predict-league-name">Premier League</span>
+                        <span class="predict-match-date">${dateStr} • ${m.home_score}:${m.away_score}</span>
+                    </div>
+                    <div class="predict-teams-container">
+                        <div class="predict-team">
+                            <div class="predict-team-logo">
+                                <svg viewBox="0 0 100 100" width="60" height="60"><circle cx="50" cy="50" r="45" fill="${homeColor}"/><text x="50" y="58" text-anchor="middle" fill="white" font-size="22" font-weight="bold" font-family="Inter,sans-serif">${homeAbbr}</text></svg>
+                            </div>
+                            <span class="predict-team-name">${m.home_team}</span>
+                            <span class="predict-team-label">Хозяева</span>
+                        </div>
+                        <div class="predict-vs-section">
+                            <span class="predict-vs-text">VS</span>
+                        </div>
+                        <div class="predict-team">
+                            <div class="predict-team-logo">
+                                <svg viewBox="0 0 100 100" width="60" height="60"><circle cx="50" cy="50" r="45" fill="${awayColor}"/><text x="50" y="58" text-anchor="middle" fill="white" font-size="22" font-weight="bold" font-family="Inter,sans-serif">${awayAbbr}</text></svg>
+                            </div>
+                            <span class="predict-team-name">${m.away_team}</span>
+                            <span class="predict-team-label">Гости</span>
+                        </div>
+                    </div>
+                    <div id="result-${id}">${p ? renderProbs(p) : ''}</div>
+                    ${!p && canGen ? `<button class="predict-action-btn" id="btn-${id}" onclick="predict(${id})"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8z"/><path d="M12 6v6l4 2"/></svg> Получить прогноз</button>` : ''}
+                    ${!p && !canGen ? '<div class="predict-pending"><i class="fas fa-clock"></i> Прогноз ожидается</div>' : ''}
+                </div>`;
             });
             document.getElementById('content').innerHTML = html;
-            matches.forEach(m => { if (m.prediction) animateProbs(m.ID||m.id, m.prediction) });
+            matches.forEach(m => { if (m.prediction) animateProbs(m.ID || m.id, m.prediction); });
         }
+
         function renderProbs(p) {
-            const hw=Math.round(p.home_win_prob||0), dw=Math.round(p.draw_prob||0), aw=Math.round(p.away_win_prob||0);
-            return `<div class="prob-bar"><div class="prob-label"><span>🏠 Победа хозяев</span><span>${hw}%</span></div><div class="prob-track"><div class="prob-fill home" style="width:0"></div></div></div><div class="prob-bar"><div class="prob-label"><span>🤝 Ничья</span><span>${dw}%</span></div><div class="prob-track"><div class="prob-fill draw" style="width:0"></div></div></div><div class="prob-bar"><div class="prob-label"><span>✈️ Победа гостей</span><span>${aw}%</span></div><div class="prob-track"><div class="prob-fill away" style="width:0"></div></div></div>`;
+            const hw = Math.round(p.home_win_prob || 0), dw = Math.round(p.draw_prob || 0), aw = Math.round(p.away_win_prob || 0);
+            const verdict = getVerdict(hw, dw, aw);
+            return `<div class="prediction-result show">
+                <div class="result-header">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#00e676" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                    <span>AI Prediction Complete</span>
+                </div>
+                <div class="prob-bars">
+                    <div class="prob-item">
+                        <div class="prob-info"><span class="prob-name">🏠 Победа хозяев</span><span class="prob-value home-value">${hw}%</span></div>
+                        <div class="new-prob-track"><div class="new-prob-fill home-fill" style="width:0"></div></div>
+                    </div>
+                    <div class="prob-item">
+                        <div class="prob-info"><span class="prob-name">🤝 Ничья</span><span class="prob-value draw-value">${dw}%</span></div>
+                        <div class="new-prob-track"><div class="new-prob-fill draw-fill" style="width:0"></div></div>
+                    </div>
+                    <div class="prob-item">
+                        <div class="prob-info"><span class="prob-name">✈️ Победа гостей</span><span class="prob-value away-value">${aw}%</span></div>
+                        <div class="new-prob-track"><div class="new-prob-fill away-fill" style="width:0"></div></div>
+                    </div>
+                </div>
+                <div class="verdict">
+                    <span class="verdict-label">Вердикт:</span>
+                    <span class="verdict-value">${verdict}</span>
+                </div>
+            </div>`;
         }
+
+        function getVerdict(home, draw, away) {
+            if (home > draw && home > away) return '🏠 Ожидается победа хозяев';
+            if (away > draw && away > home) return '✈️ Ожидается победа гостей';
+            return '🤝 Ожидается ничья';
+        }
+
         function animateProbs(id, p) {
-            const hw=Math.round(p.home_win_prob||0), dw=Math.round(p.draw_prob||0), aw=Math.round(p.away_win_prob||0);
-            setTimeout(() => { const f=document.querySelectorAll(`#result-${id} .prob-fill`);if(f[0])f[0].style.width=hw+'%';if(f[1])f[1].style.width=dw+'%';if(f[2])f[2].style.width=aw+'%' }, 100);
+            const hw = Math.round(p.home_win_prob || 0), dw = Math.round(p.draw_prob || 0), aw = Math.round(p.away_win_prob || 0);
+            setTimeout(() => {
+                const fills = document.querySelectorAll(`#result-${id} .new-prob-fill`);
+                if (fills[0]) fills[0].style.width = hw + '%';
+                if (fills[1]) fills[1].style.width = dw + '%';
+                if (fills[2]) fills[2].style.width = aw + '%';
+            }, 100);
         }
+
         async function predict(id) {
-            const btn=document.getElementById('btn-'+id);if(!btn)return;btn.disabled=true;btn.innerHTML='<i class="fas fa-spinner fa-spin"></i>...';
-            try{const res=await API.getPrediction(id);const p=res.prediction||res;document.getElementById('result-'+id).innerHTML=renderProbs(p);animateProbs(id,p);btn.remove();showToast('Прогноз получен!','success')}catch(err){showToast(err.message,'error');btn.disabled=false;btn.innerHTML='<i class="fas fa-brain"></i> Получить прогноз'}
+            const btn = document.getElementById('btn-' + id);
+            if (!btn) return;
+            btn.disabled = true;
+            btn.innerHTML = '<svg class="spinner-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 1 0 10 10"/></svg> Анализ...';
+            try {
+                const res = await API.getPrediction(id);
+                const p = res.prediction || res;
+                document.getElementById('result-' + id).innerHTML = renderProbs(p);
+                animateProbs(id, p);
+                btn.remove();
+                showToast('Прогноз получен!', 'success');
+            } catch (err) {
+                showToast(err.message, 'error');
+                btn.disabled = false;
+                btn.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8z"/><path d="M12 6v6l4 2"/></svg> Получить прогноз';
+            }
         }
+
         load();
     </script>
 </body>

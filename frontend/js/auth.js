@@ -6,6 +6,14 @@
 const Auth = {
     user: null,
 
+    // SVG иконки для ролей (профессиональные, заменяют emoji)
+    _roleIcons: {
+        admin: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#00e676" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/></svg>',
+        operator: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#00e676" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>',
+        analyst: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#00e676" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>',
+        user: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#00e676" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>'
+    },
+
     // Проверить авторизацию, загрузить данные пользователя
     async check() {
         try {
@@ -76,12 +84,14 @@ const Auth = {
 
         // ─── Nav-actions: кнопки Войти / Профиль+Выйти ───
         if (this.user && navActions) {
-            const roleBadge = { admin: '👑', operator: '⚙️', analyst: '📊', user: '👤' };
+            const roleIcon = this._roleIcons[this.user.role] || this._roleIcons.user;
             navActions.innerHTML =
-                '<span class="nav-user">' +
-                    '<span class="nav-role">' + (roleBadge[this.user.role] || '👤') + '</span>' +
-                    '<span class="nav-username">' + this.user.username + '</span>' +
-                '</span>' +
+                '<a href="/dashboard" class="nav-user-link">' +
+                    '<span class="nav-user">' +
+                        '<span class="nav-role">' + roleIcon + '</span>' +
+                        '<span class="nav-username">' + this.user.username + '</span>' +
+                    '</span>' +
+                '</a>' +
                 '<button class="btn btn-outline btn-sm" onclick="Auth.logout()">Выйти</button>';
         } else if (navActions) {
             navActions.innerHTML =

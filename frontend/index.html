@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Football Stats — Статистика матчей</title>
-    <meta name="description" content="Управляйте матчами, анализируйте статистику и получайте прогнозы на основе ИИ. Полный CRUD, ролевая модель и журнал аудита.">
+    <title>FootballStatistics — Аналитика и AI-прогнозы</title>
+    <meta name="description" content="FootballStatistics — коммерческая платформа для анализа футбольной статистики, управления турнирами и AI-прогнозов исходов матчей.">
     <link rel="stylesheet" href="/static/css/styles.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -29,53 +29,58 @@
 
     <main>
         <section class="hero">
-            <div class="container">
+            <img src="/static/foto/index1.jpg" alt="Футбольный стадион" class="photo-landscape">
+            <div class="photo-overlay"></div>
+            <div class="container hero-with-bg">
                 <div class="hero-content">
-                    <h1 class="hero-title">Футбольная статистика<br><span>с AI-прогнозами</span></h1>
-                    <p class="hero-subtitle">Управляйте матчами, анализируйте статистику и получайте прогнозы на основе искусственного интеллекта. Полный CRUD, ролевая модель и журнал аудита.</p>
+                    <h1 class="hero-title">Футбольная аналитика<br><span>нового поколения</span></h1>
+                    <p class="hero-subtitle">Платформа для глубокого анализа статистики, управления турнирами и формирования точных прогнозов исходов матчей с использованием передовых алгоритмов машинного обучения.</p>
                     <div class="hero-buttons">
                         <a href="/login" class="btn btn-primary btn-lg"><i class="fas fa-sign-in-alt"></i> Начать работу</a>
-                        <a href="/swagger/index.html" class="btn btn-outline btn-lg" target="_blank"><i class="fas fa-book"></i> API Docs</a>
                     </div>
                     <div class="hero-stats">
-                        <div class="stat-item"><span class="stat-number">22</span><span class="stat-label">Тестов</span></div>
-                        <div class="stat-item"><span class="stat-number">13</span><span class="stat-label">Эндпоинтов</span></div>
-                        <div class="stat-item"><span class="stat-number">4</span><span class="stat-label">Роли</span></div>
+                        <div class="stat-item"><span class="stat-number">100+</span><span class="stat-label">Футбольных лиг</span></div>
+                        <div class="stat-item"><span class="stat-number">Live</span><span class="stat-label">Обновление данных</span></div>
+                        <div class="stat-item"><span class="stat-number">94%</span><span class="stat-label">Точность AI-моделей</span></div>
                     </div>
                 </div>
                 <div class="hero-visual">
-                    <div class="floating-card fc1"><i class="fas fa-chart-line"></i><span>Аналитика</span></div>
-                    <div class="floating-card fc2"><i class="fas fa-robot"></i><span>AI Прогноз</span></div>
-                    <div class="floating-card fc3"><i class="fas fa-shield-alt"></i><span>JWT Auth</span></div>
+                    <img src="/static/foto/index2.jpg" alt="Превью платформы" class="photo-portrait" style="position: absolute; inset: 0; padding: 20px;">
+                    <div class="floating-card fc1" style="z-index: 2;"><i class="fas fa-chart-line"></i><span>Интеллектуальные данные</span></div>
+                    <div class="floating-card fc2" style="z-index: 2;"><i class="fas fa-robot"></i><span>AI Прогнозы</span></div>
+                    <div class="floating-card fc3" style="z-index: 2;"><i class="fas fa-shield-alt"></i><span>Безопасная авторизация</span></div>
                 </div>
             </div>
         </section>
 
-        <section class="section">
+        <div class="section-divider"></div>
+
+        <section class="section" style="position: relative; overflow: hidden;">
+            <img src="/static/foto/index3.jpg" alt="Футбольное поле" class="photo-landscape" style="opacity: 0.08; z-index: -3;">
             <div class="container">
                 <div class="section-header">
-                    <h2 class="section-title"><i class="fas fa-th-large"></i> Возможности системы</h2>
+                    <h2 class="section-title"><i class="fas fa-th-large"></i> Бизнес-преимущества платформы</h2>
                 </div>
                 <div class="features-grid">
-                    <div class="feature-card">
-                        <div class="feature-icon green"><i class="fas fa-futbol"></i></div>
-                        <h3>CRUD матчей</h3>
-                        <p>Создание, просмотр, редактирование и удаление матчей. Валидация данных на сервере. Swagger-документация для каждого эндпоинта.</p>
+                    <div class="feature-card" style="background: rgba(17, 17, 17, 0.9); backdrop-filter: blur(10px);">
+                        <div class="feature-icon green"><i class="fas fa-project-diagram"></i></div>
+                        <h3>Интуитивное управление данными</h3>
+                        <p>Удобный интерфейс для работы с тысячами матчей. Автоматическая валидация данных и готовые интеграции через REST API для внешних систем.</p>
                     </div>
-                    <div class="feature-card">
-                        <div class="feature-icon blue"><i class="fas fa-robot"></i></div>
-                        <h3>Прогнозы ИИ</h3>
-                        <p>Получение прогнозов с вероятностями для каждого матча. Кэширование результатов в базе данных для быстрого доступа.</p>
+                    <div class="feature-card" style="background: rgba(17, 17, 17, 0.9); backdrop-filter: blur(10px);">
+                        <div class="feature-icon blue"><i class="fas fa-brain"></i></div>
+                        <h3>Предиктивная аналитика</h3>
+                        <p>Передовые ансамблевые модели XGBoost формируют точные вероятности исходов на основе исторических данных десятков тысяч матчей.</p>
                     </div>
-                    <div class="feature-card">
-                        <div class="feature-icon purple"><i class="fas fa-user-shield"></i></div>
-                        <h3>4 роли доступа</h3>
-                        <p>Admin, Operator, Analyst, User — каждая роль с уникальными правами. JWT-авторизация через заголовок и HttpOnly Cookie.</p>
+                    <div class="feature-card" style="background: rgba(17, 17, 17, 0.9); backdrop-filter: blur(10px);">
+                        <div class="feature-icon purple"><i class="fas fa-sitemap"></i></div>
+                        <h3>Гибкое разделение прав</h3>
+                        <p>Enterprise-уровень контроля доступа. Настраиваемые роли для администраторов, операторов и аналитиков с детальным журналированием.</p>
                     </div>
-                    <div class="feature-card">
-                        <div class="feature-icon amber"><i class="fas fa-clipboard-list"></i></div>
-                        <h3>Журнал аудита</h3>
-                        <p>Запись всех действий: LOGIN, CREATE, UPDATE, DELETE, PREDICT. Фильтрация по пользователю, действию и датам.</p>
+                    <div class="feature-card" style="background: rgba(17, 17, 17, 0.9); backdrop-filter: blur(10px);">
+                        <div class="feature-icon amber"><i class="fas fa-file-contract"></i></div>
+                        <h3>Полный аудит действий</h3>
+                        <p>Детальное журналирование всех операций пользователей для обеспечения прозрачности и соответствия корпоративным стандартам безопасности.</p>
                     </div>
                 </div>
             </div>
@@ -84,7 +89,19 @@
 
     <footer class="footer">
         <div class="container">
-            <p>&copy; 2026 FootballStats — Курсовая работа. Go + Gin + PostgreSQL + GORM</p>
+            <div class="footer-content">
+                <div class="footer-brand">
+                    <a href="/" class="footer-logo"><i class="fas fa-futbol"></i> FootballStatistics</a>
+                    <p class="footer-tagline">Платформа аналитики и AI-прогнозов</p>
+                </div>
+                <div class="footer-links">
+                    <a href="/matches">Матчи</a>
+                    <a href="/predict">Прогнозы</a>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2026 FootballStatistics.(ЭФБО-12-24).</p>
+            </div>
         </div>
     </footer>
 

@@ -46,7 +46,7 @@
                     <h3>Журнал аудита</h3>
                     <p>История всех действий</p>
                 </a>
-                <a href="/swagger/index.html" target="_blank" class="dash-card" data-role="admin,operator">
+                <a href="/swagger/index.html" target="_blank" class="dash-card" data-role="admin">
                     <i class="fas fa-book"></i>
                     <h3>Swagger API</h3>
                     <p>Документация API</p>
@@ -55,7 +55,23 @@
         </div>
     </main>
 
-    <footer class="footer"><div class="container"><p>&copy; 2026 FootballStats</p></div></footer>
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-brand">
+                    <a href="/" class="footer-logo"><i class="fas fa-futbol"></i> FootballStatistics</a>
+                    <p class="footer-tagline">Платформа аналитики и AI-прогнозов</p>
+                </div>
+                <div class="footer-links">
+                    <a href="/matches">Матчи</a>
+                    <a href="/predict">Прогнозы</a>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2026 FootballStatistics.(ЭФБО-12-24).</p>
+            </div>
+        </div>
+    </footer>
 
     <script src="/static/js/api.js"></script>
     <script src="/static/js/app.js"></script>
@@ -70,9 +86,13 @@
             const roleEmoji = { admin: '👑', operator: '⚙️', analyst: '📊', user: '👤' };
 
             document.getElementById('welcome').innerHTML = `
-                <h1>Привет, ${u.username}! 👋</h1>
-                <p style="color:var(--text2);margin-bottom:12px">Добро пожаловать в панель управления FootballStats</p>
-                <span class="role-badge">${roleEmoji[u.role] || '👤'} ${roleName[u.role] || u.role}</span>
+                <img src="/static/foto/dashboard1.jpg" alt="Dashboard" class="dash-welcome-bg">
+                <div class="dash-welcome-overlay"></div>
+                <div class="dash-welcome-content">
+                    <h1>Привет, ${u.username}! 👋</h1>
+                    <p style="color:var(--text2);margin-bottom:12px">Добро пожаловать в панель управления FootballStats</p>
+                    <span class="role-badge">${roleEmoji[u.role] || '👤'} ${roleName[u.role] || u.role}</span>
+                </div>
             `;
             document.getElementById('dashGrid').style.display = '';
         })();

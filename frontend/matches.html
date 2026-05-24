@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Матчи — FootballStats</title>
-    <meta name="description" content="Просмотр и управление футбольными матчами.">
+    <title>Матчи — FootballStatistics</title>
+    <meta name="description" content="Просмотр, создание и управление футбольными матчами с автоматической валидацией данных.">
     <link rel="stylesheet" href="/static/css/styles.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -26,11 +26,15 @@
 
     <main>
         <div class="container">
-            <div class="page-header">
-                <h1><i class="fas fa-futbol"></i> Матчи</h1>
-                <button class="btn btn-primary" id="addBtn" data-role="admin,operator" onclick="openModal()">
-                    <i class="fas fa-plus"></i> Добавить матч
-                </button>
+            <div class="banner-header">
+                <img src="/static/foto/matches1.jpg" alt="Футбольные матчи" class="photo-landscape">
+                <div class="photo-overlay"></div>
+                <h1 style="color:#fff"><i class="fas fa-futbol"></i> Матчи</h1>
+                <div class="banner-actions">
+                    <button class="btn btn-primary" id="addBtn" data-role="admin,operator" onclick="openModal()" style="display:none">
+                        <i class="fas fa-plus"></i> Добавить матч
+                    </button>
+                </div>
             </div>
             <div class="table-card">
                 <div id="tableBody"><div class="loader"></div></div>
@@ -40,25 +44,49 @@
 
     <!-- Модальное окно -->
     <div class="modal-overlay" id="modal">
-        <div class="modal">
-            <div class="modal-header">
-                <h2 id="modalTitle">Новый матч</h2>
-                <button class="modal-close" onclick="closeModal()">&times;</button>
+        <div class="modal" style="padding: 0; overflow: hidden;">
+            <div class="modal-header" style="padding: 24px 32px; position: relative; margin-bottom: 0;">
+                <img src="/static/foto/matches2.jpg" alt="Modal Header" class="photo-landscape" style="opacity: 0.4;">
+                <div class="photo-overlay"></div>
+                <h2 id="modalTitle" style="position: relative; z-index: 10; color: #fff; margin: 0;">Новый матч</h2>
+                <button class="modal-close" onclick="closeModal()" style="position: relative; z-index: 10; background: rgba(255,255,255,0.1); color: #fff;">&times;</button>
             </div>
-            <form id="matchForm" onsubmit="handleSubmit(event)">
-                <div class="form-group"><label>Домашняя команда</label><input type="text" id="homeTeam" placeholder="Arsenal" required></div>
-                <div class="form-group"><label>Гостевая команда</label><input type="text" id="awayTeam" placeholder="Chelsea" required></div>
+            <form id="matchForm" onsubmit="handleSubmit(event)" style="padding: 32px;">
+                <div class="form-group"><label>Домашняя команда <i class="fas fa-info-circle team-info-icon" title="Справка по командам" onclick="toggleTeamTooltip(event, 'homeTeam')"></i></label><input type="text" id="homeTeam" placeholder="Напр. Arsenal" required></div>
+                <div class="form-group"><label>Гостевая команда <i class="fas fa-info-circle team-info-icon" title="Справка по командам" onclick="toggleTeamTooltip(event, 'awayTeam')"></i></label><input type="text" id="awayTeam" placeholder="Напр. Chelsea" required></div>
                 <div class="form-group"><label>Дата матча</label><input type="datetime-local" id="matchDate" required></div>
-                <div class="form-group"><label>Счёт (дома)</label><input type="number" id="homeScore" min="0" value="0"></div>
-                <div class="form-group"><label>Счёт (гости)</label><input type="number" id="awayScore" min="0" value="0"></div>
-                <div class="form-group"><label>Статус</label><select id="matchStatus"><option value="scheduled">Запланирован</option><option value="finished">Завершён</option></select></div>
                 <input type="hidden" id="editId">
                 <button type="submit" class="btn btn-primary" id="submitBtn"><i class="fas fa-save"></i> Сохранить</button>
             </form>
         </div>
     </div>
 
-    <footer class="footer"><div class="container"><p>&copy; 2026 FootballStats</p></div></footer>
+    <!-- Tooltip Popover -->
+    <div class="custom-popover" id="teamPopover">
+        <div class="popover-header">
+            <span>Доступные команды ML-модели</span>
+            <i class="fas fa-times popover-close" onclick="closeTeamTooltip()"></i>
+        </div>
+        <div class="tooltip-teams-list" id="teamPopoverList"></div>
+    </div>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-brand">
+                    <a href="/" class="footer-logo"><i class="fas fa-futbol"></i> FootballStatistics</a>
+                    <p class="footer-tagline">Платформа аналитики и AI-прогнозов</p>
+                </div>
+                <div class="footer-links">
+                    <a href="/matches">Матчи</a>
+                    <a href="/predict">Прогнозы</a>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2026 FootballStatistics.(ЭФБО-12-24).</p>
+            </div>
+        </div>
+    </footer>
 
     <script src="/static/js/api.js"></script>
     <script src="/static/js/app.js"></script>
@@ -92,9 +120,49 @@
         }
         function openModal(title='Новый матч'){document.getElementById('modalTitle').textContent=title;document.getElementById('modal').classList.add('active')}
         function closeModal(){document.getElementById('modal').classList.remove('active');document.getElementById('matchForm').reset();document.getElementById('editId').value=''}
-        function editMatch(m){document.getElementById('homeTeam').value=m.home_team;document.getElementById('awayTeam').value=m.away_team;document.getElementById('homeScore').value=m.home_score;document.getElementById('awayScore').value=m.away_score;document.getElementById('matchStatus').value=m.status||'scheduled';document.getElementById('editId').value=m.ID||m.id;if(m.match_date||m.date){const d=new Date(m.match_date||m.date);document.getElementById('matchDate').value=d.toISOString().slice(0,16)}openModal('Редактировать матч')}
-        async function handleSubmit(e){e.preventDefault();const btn=document.getElementById('submitBtn');btn.disabled=true;const data={home_team:document.getElementById('homeTeam').value,away_team:document.getElementById('awayTeam').value,home_score:parseInt(document.getElementById('homeScore').value)||0,away_score:parseInt(document.getElementById('awayScore').value)||0,match_date:new Date(document.getElementById('matchDate').value).toISOString(),status:document.getElementById('matchStatus').value};const editId=document.getElementById('editId').value;try{if(editId){await API.updateMatch(editId,data);showToast('Матч обновлён','success')}else{await API.createMatch(data);showToast('Матч создан','success')}closeModal();loadMatches()}catch(err){showToast(err.message,'error')}btn.disabled=false}
+        function editMatch(m){document.getElementById('homeTeam').value=m.home_team;document.getElementById('awayTeam').value=m.away_team;document.getElementById('editId').value=m.ID||m.id;if(m.match_date||m.date){const d=new Date(m.match_date||m.date);document.getElementById('matchDate').value=d.toISOString().slice(0,16)}openModal('Редактировать матч')}
+        async function handleSubmit(e){e.preventDefault();const btn=document.getElementById('submitBtn');btn.disabled=true;const data={home_team:document.getElementById('homeTeam').value,away_team:document.getElementById('awayTeam').value,home_score:0,away_score:0,match_date:new Date(document.getElementById('matchDate').value).toISOString(),status:'scheduled'};const editId=document.getElementById('editId').value;try{if(editId){await API.updateMatch(editId,data);showToast('Матч обновлён','success')}else{await API.createMatch(data);showToast('Матч создан','success')}closeModal();loadMatches()}catch(err){showToast(err.message,'error')}btn.disabled=false}
         async function deleteMatch(id){if(!confirm('Удалить матч #'+id+'?'))return;try{await API.deleteMatch(id);showToast('Матч удалён','success');loadMatches()}catch(err){showToast(err.message,'error')}}
+        
+        // --- Tooltip Logic ---
+        const teamMappings = [
+            { ml: "Arsenal", full: "Арсенал" }, { ml: "Aston Villa", full: "Астон Вилла" }, { ml: "Birmingham", full: "Бирмингем" },
+            { ml: "Blackburn", full: "Блэкберн" }, { ml: "Bolton", full: "Болтон" }, { ml: "Bournemouth", full: "Борнмут" },
+            { ml: "Bradford", full: "Брэдфорд" }, { ml: "Brentford", full: "Брентфорд" }, { ml: "Brighton", full: "Брайтон" },
+            { ml: "Burnley", full: "Бернли" }, { ml: "Cardiff", full: "Кардифф" }, { ml: "Charlton", full: "Чарльтон" },
+            { ml: "Chelsea", full: "Челси" }, { ml: "Coventry", full: "Ковентри" }, { ml: "Crystal Palace", full: "Кристал Пэлас" },
+            { ml: "Derby", full: "Дерби" }, { ml: "Everton", full: "Эвертон" }, { ml: "Fulham", full: "Фулхэм" },
+            { ml: "Hull", full: "Халл Сити" }, { ml: "Ipswich", full: "Ипсвич" }, { ml: "Leeds", full: "Лидс Юнайтед" },
+            { ml: "Leicester", full: "Лестер Сити" }, { ml: "Liverpool", full: "Ливерпуль" }, { ml: "Man City", full: "Манчестер Сити" },
+            { ml: "Man United", full: "Манчестер Юнайтед" }, { ml: "Middlesbrough", full: "Мидлсбро" }, { ml: "Newcastle", full: "Ньюкасл" },
+            { ml: "Nott'm Forest", full: "Ноттингем Форест" }, { ml: "Norwich", full: "Норвич" }, { ml: "QPR", full: "Куинз Парк Рейнджерс" },
+            { ml: "Reading", full: "Рединг" }, { ml: "Sheffield United", full: "Шеффилд Юнайтед" }, { ml: "Southampton", full: "Саутгемптон" },
+            { ml: "Stoke", full: "Сток Сити" }, { ml: "Sunderland", full: "Сандерленд" }, { ml: "Swansea", full: "Суонси" },
+            { ml: "Tottenham", full: "Тоттенхэм" }, { ml: "Watford", full: "Уотфорд" }, { ml: "West Brom", full: "Вест Бромвич" },
+            { ml: "West Ham", full: "Вест Хэм" }, { ml: "Wigan", full: "Уиган" }, { ml: "Wolves", full: "Вулверхэмптон" }
+        ];
+
+        let popoverTargetInput = null;
+        function toggleTeamTooltip(event, inputId) {
+            const popover = document.getElementById('teamPopover');
+            if (popover.classList.contains('active') && popoverTargetInput === inputId) { closeTeamTooltip(); return; }
+            popoverTargetInput = inputId;
+            const icon = event.currentTarget;
+            const rect = icon.getBoundingClientRect();
+            document.getElementById('teamPopoverList').innerHTML = teamMappings.map(t => `<div class="tooltip-team-row" style="cursor:pointer" onclick="selectTeam('${t.ml.replace(/'/g, "\\'")}', '${inputId}')"><span class="tooltip-ml-name">${t.ml}</span><span class="tooltip-full-name">${t.full}</span></div>`).join('');
+            popover.style.left = Math.max(10, rect.left - 20) + 'px';
+            popover.style.top = (rect.bottom + 15) + 'px';
+            popover.classList.add('active');
+            event.stopPropagation();
+        }
+
+        function closeTeamTooltip() { document.getElementById('teamPopover').classList.remove('active'); popoverTargetInput = null; }
+        function selectTeam(mlName, inputId) { document.getElementById(inputId).value = mlName; closeTeamTooltip(); }
+        document.addEventListener('click', function(e) {
+            const popover = document.getElementById('teamPopover');
+            if (popover.classList.contains('active') && !popover.contains(e.target) && !e.target.classList.contains('team-info-icon')) closeTeamTooltip();
+        });
+
         loadMatches();
     </script>
 </body>
