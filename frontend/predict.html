@@ -14,6 +14,7 @@
         <div class="container nav-container">
             <a href="/" class="logo"><i class="fas fa-futbol"></i><span>FootballStats</span></a>
             <ul class="nav-menu">
+                <li><a href="/">Главная</a></li>
                 <li data-role="admin,operator,analyst,user"><a href="/dashboard">Панель</a></li>
                 <li data-role="admin,operator,analyst,user"><a href="/matches">Матчи</a></li>
                 <li data-role="admin,operator,analyst,user"><a href="/predict" class="active">Прогнозы</a></li>
@@ -105,13 +106,16 @@
 
                 html += `<div class="predict-card" id="match-${id}">
                     <div class="predict-card-header">
-                        <span class="predict-league-name">Premier League</span>
+                        <span class="predict-league-name">
+                            <img src="/static/foto/logos/PL Logo.svg" alt="PL Logo" style="width: 24px; height: 24px; vertical-align: middle; margin-right: 8px;">
+                            English Premier League
+                        </span>
                         <span class="predict-match-date">${dateStr} • ${m.home_score}:${m.away_score}</span>
                     </div>
                     <div class="predict-teams-container">
                         <div class="predict-team">
                             <div class="predict-team-logo">
-                                <svg viewBox="0 0 100 100" width="60" height="60"><circle cx="50" cy="50" r="45" fill="${homeColor}"/><text x="50" y="58" text-anchor="middle" fill="white" font-size="22" font-weight="bold" font-family="Inter,sans-serif">${homeAbbr}</text></svg>
+                                <img src="/static/foto/logos/${m.home_team}.svg" alt="${m.home_team}" width="60" height="60" style="object-fit: contain;">
                             </div>
                             <span class="predict-team-name">${m.home_team}</span>
                             <span class="predict-team-label">Хозяева</span>
@@ -121,7 +125,7 @@
                         </div>
                         <div class="predict-team">
                             <div class="predict-team-logo">
-                                <svg viewBox="0 0 100 100" width="60" height="60"><circle cx="50" cy="50" r="45" fill="${awayColor}"/><text x="50" y="58" text-anchor="middle" fill="white" font-size="22" font-weight="bold" font-family="Inter,sans-serif">${awayAbbr}</text></svg>
+                                <img src="/static/foto/logos/${m.away_team}.svg" alt="${m.away_team}" width="60" height="60" style="object-fit: contain;">
                             </div>
                             <span class="predict-team-name">${m.away_team}</span>
                             <span class="predict-team-label">Гости</span>
