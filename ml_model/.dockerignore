@@ -6,7 +6,3 @@ __pycache__/
 .gitignore
 list_teams.py
 
-# Данные и скрипты для обучения (не нужны в продакшн-образе)
-epl_final.csv
-train.py
-dataset.py
