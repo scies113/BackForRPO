@@ -13,9 +13,6 @@ type Match struct {
 	AwayTeamID   uint      `gorm:"default:0" json:"away_team_id"`
 	AwayTeam     string    `gorm:"not null" json:"away_team"`
 	MatchDate    time.Time `gorm:"not null" json:"match_date"`
-	HomeScore    int       `gorm:"default:0" json:"home_score"`
-	AwayScore    int       `gorm:"default:0" json:"away_score"`
-	Status       string    `gorm:"default:scheduled" json:"status"` // scheduled, finished
 	Prediction   *Prediction `json:"prediction"` // Связь 1 к 1 с прогнозом
 }
 

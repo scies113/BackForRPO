@@ -8,10 +8,7 @@ CREATE TABLE IF NOT EXISTS matches (
     home_team VARCHAR(100) NOT NULL,
     away_team_id INT DEFAULT 0,
     away_team VARCHAR(100) NOT NULL,
-    match_date TIMESTAMP WITH TIME ZONE NOT NULL,
-    home_score INT DEFAULT 0,
-    away_score INT DEFAULT 0,
-    status VARCHAR(20) DEFAULT 'scheduled'
+    match_date TIMESTAMP WITH TIME ZONE NOT NULL
 );
 
 -- Индекс для soft delete (GORM)

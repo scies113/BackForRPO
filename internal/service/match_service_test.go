@@ -97,7 +97,6 @@ func TestMatchStruct(t *testing.T) {
 		HomeTeam:  "Liverpool",
 		AwayTeam:  "Manchester United",
 		MatchDate: time.Now().AddDate(0, 0, 5),
-		Status:    "scheduled",
 	}
 
 	if match.HomeTeam != "Liverpool" {
@@ -108,13 +107,4 @@ func TestMatchStruct(t *testing.T) {
 		t.Error("AwayTeam should be Manchester United")
 	}
 
-	// Тест 9: Проверка значения по умолчанию для счета
-	if match.HomeScore != 0 || match.AwayScore != 0 {
-		t.Error("Default score should be 0")
-	}
-
-	// Тест 10: Проверка статуса по умолчанию
-	if match.Status != "scheduled" {
-		t.Error("Default status should be 'scheduled'")
-	}
 }

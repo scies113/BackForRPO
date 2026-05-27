@@ -74,9 +74,6 @@ func (s *MatchService) UpdateMatch(match *model.Match, id uint, userID uint, use
 	existingMatch.HomeTeam = match.HomeTeam
 	existingMatch.AwayTeam = match.AwayTeam
 	existingMatch.MatchDate = match.MatchDate
-	existingMatch.HomeScore = match.HomeScore
-	existingMatch.AwayScore = match.AwayScore
-	existingMatch.Status = match.Status
 
 	if err := s.repo.Update(existingMatch); err != nil {
 		return err
