@@ -92,13 +92,13 @@ func main() {
 			secure.GET("/matches", matchHandler.GetAllMatches)
 			secure.GET("/matches/:id", matchHandler.GetMatchByID)
 
-			// Матчи: запись (admin, operator) — RoleMiddleware ПЕРЕД хендлером
-			secure.POST("/matches", middleware.RoleMiddleware("admin", "operator"), matchHandler.CreateMatch)
-			secure.PUT("/matches/:id", middleware.RoleMiddleware("admin", "operator"), matchHandler.UpdateMatch)
-			secure.DELETE("/matches/:id", middleware.RoleMiddleware("admin", "operator"), matchHandler.DeleteMatch)
+			// Матчи: запись (admin, operator, analyst) — RoleMiddleware ПЕРЕД хендлером
+			secure.POST("/matches", middleware.RoleMiddleware("admin", "operator", "analyst"), matchHandler.CreateMatch)
+			secure.PUT("/matches/:id", middleware.RoleMiddleware("admin", "operator", "analyst"), matchHandler.UpdateMatch)
+			secure.DELETE("/matches/:id", middleware.RoleMiddleware("admin", "operator", "analyst"), matchHandler.DeleteMatch)
 
-			// Прогнозы ИИ (operator, analyst, admin)
-			secure.POST("/predict/:id", middleware.RoleMiddleware("admin", "operator", "analyst"), predictHandler.GetPrediction)
+			// Прогнозы ИИ (analyst, admin)
+			secure.POST("/predict/:id", middleware.RoleMiddleware("admin", "analyst"), predictHandler.GetPrediction)
 
 			// Админские route
 			admin := secure.Group("")
@@ -110,8 +110,12 @@ func main() {
 		}
 	}
 
-	// Swagger UI
-	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+	// Swagger UI (protected: only for admin)
+	swaggerGroup := r.Group("/swagger")
+	swaggerGroup.Use(middleware.AuthMiddleware(), middleware.RoleMiddleware("admin"))
+	{
+		swaggerGroup.GET("/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+	}
 
 	// Фронтенд: раздаём статические файлы из папки frontend/
 	r.Static("/static", "./frontend")

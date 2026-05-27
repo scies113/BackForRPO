@@ -35,7 +35,7 @@ func (h *AuthHandler) setAuthCookie(c *gin.Context, token string) {
 	http.SetCookie(c.Writer, &http.Cookie{
 		Name:     "token",
 		Value:    token,
-		Path:     "/api",
+		Path:     "/",
 		MaxAge:   86400, // 24 часа
 		HttpOnly: true,  // Блокирует доступ из JS (защита от XSS)
 		Secure:   isSecureCookie(),
@@ -45,11 +45,22 @@ func (h *AuthHandler) setAuthCookie(c *gin.Context, token string) {
 
 // clearAuthCookie — удаление куки авторизации (logout)
 func (h *AuthHandler) clearAuthCookie(c *gin.Context) {
+	// Очищаем новую куку на корневом пути
+	http.SetCookie(c.Writer, &http.Cookie{
+		Name:     "token",
+		Value:    "",
+		Path:     "/",
+		MaxAge:   -1,
+		HttpOnly: true,
+		Secure:   isSecureCookie(),
+		SameSite: http.SameSiteLaxMode,
+	})
+	// Очищаем старую куку на /api (чтобы у пользователей не зависала старая сессия)
 	http.SetCookie(c.Writer, &http.Cookie{
 		Name:     "token",
 		Value:    "",
 		Path:     "/api",
-		MaxAge:   -1,    // Немедленное удаление
+		MaxAge:   -1,
 		HttpOnly: true,
 		Secure:   isSecureCookie(),
 		SameSite: http.SameSiteLaxMode,

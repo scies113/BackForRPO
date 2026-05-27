@@ -129,7 +129,7 @@ func TestCreateMatch_ForbiddenRole(t *testing.T) {
 		c.Next()
 	})
 	router.POST("/api/matches",
-		middleware.RoleMiddleware("admin", "operator"),
+		middleware.RoleMiddleware("admin", "operator", "analyst"),
 		func(c *gin.Context) {
 			c.JSON(http.StatusCreated, gin.H{"message": "Матч создан"})
 		},
